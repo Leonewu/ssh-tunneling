@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+.npm
+*.log*
+.idea/
+*.tsbuildinfo
+.eslintcache
+.vscode/**/*
+!.vscode/settings.json
+!.vscode/extensions.json
+dist/
+

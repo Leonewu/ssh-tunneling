@@ -2,6 +2,7 @@ import * as net from 'net';
 import { Client as SshClient, ConnectConfig as SshConnectConfig } from 'ssh2';
 import { SocksClient, SocksClientOptions } from 'socks';
 import logger from './logger';
+import { getAvailablePort } from './utils';
 
 enum STATUS {
   INIT = 0,
@@ -10,6 +11,11 @@ enum STATUS {
   CLOSE,
 }
 
+type ProxyConfig =  {
+  srcPort: number;
+  destHost: string;
+  destPort: number;
+}
 
 class SshTunnel {
   constructor(sshConfig: SshConnectConfig & { socksServer?: string }) {
@@ -259,11 +265,7 @@ class SshTunnel {
     return this.heartbeatPromise;
   };
 
-  private genSshCommand(proxyConfig: {
-    srcPort: number;
-    destHost: string;
-    destPort: number;
-  }) {
+  private genSshCommand(proxyConfig: ProxyConfig) {
     const {
       srcPort,
       destHost,
@@ -275,11 +277,7 @@ class SshTunnel {
     return `ssh -o StrictHostKeyChecking=no -i ~/.ssh/${this.sshConfig.username} ${this.sshConfig.username}@${destHost} -L ${srcPort}:${destHost}:${destPort}`;
   }
 
-  private _proxy = async (proxyConfig: {
-    srcPort: number;
-    destHost: string;
-    destPort: number;
-  }) => {
+  private _proxy = async (proxyConfig: ProxyConfig) => {
     const { srcPort, destHost, destPort } = proxyConfig;
     if (this.proxyList.find(item => item.srcPort === srcPort)) {
       throw new Error(`local srcPort ${srcPort} is proxying`);
@@ -355,13 +353,14 @@ class SshTunnel {
     logger.cyan(
       `proxy server listening on 127.0.0.1:${srcPort} => ${destHost}:${destPort}`,
     );
-    process.on('exit', () => {
+    process.once('exit', () => {
       console.log('exit');
       this.sshClient?.destroy();
       this.socksSocket?.destroy();
       this.server?.close();
       this.proxyList.forEach(item => item.server.close());
     });
+    return proxyConfig;
   };
 
   /**
@@ -371,25 +370,34 @@ class SshTunnel {
    */
   public proxy = async (proxyConfig: string | string[]) => {
     if (Array.isArray(proxyConfig)) {
+      const result: ProxyConfig[] = [];
       await proxyConfig.reduce((pre, config) => {
         return pre.then(async () => {
           const [srcPort, destHost, destPort] = config.split(':') || [];
-          await this._proxy({
-            srcPort: Number(srcPort),
+          const localPort = await getAvailablePort(Number(srcPort));
+          const params = {
+            srcPort: localPort,
             destHost,
             destPort: Number(destPort)
-          });
+          }
+          await this._proxy(params);
+          result.push(params)
         });
       }, Promise.resolve());
+      return result;
     }
     if (typeof proxyConfig === 'string') {
       const [srcPort, destHost, destPort] = proxyConfig.split(':');
-      await this._proxy({
-        srcPort: Number(srcPort),
+      const localPort = await getAvailablePort(Number(srcPort));
+      const params: ProxyConfig = {
+        srcPort: localPort,
         destHost,
         destPort: Number(destPort)
-      });
+      }
+      await this._proxy(params);
+      return params;
     }
+    throw new Error('function proxy params invalid');
   }
 
 }

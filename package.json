@@ -1,9 +1,13 @@
 {
   "private": false,
   "name": "ssh-tunneling",
-  "version": "1.0.0",
-  "description": "a ssh-tunneling client which can reconnect automatically",
+  "version": "1.0.1",
+  "description": "a ssh-tunneling client for nodejs",
   "main": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Leonewu/ssh-tunneling"
+  },
   "scripts": {
     "start": "npx -y ts-node ./index.ts",
     "build": "npx tsc"

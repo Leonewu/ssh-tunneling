@@ -219,7 +219,7 @@ class SshTunnel {
     });
   }
 
-  public exec(command: string): Promise<{ command: string; result: string }>
+  public exec(command: string): Promise<string>
 
   public exec(command: string[]): Promise<{ command: string; result: string }[]>
 
@@ -241,11 +241,7 @@ class SshTunnel {
         }
       });
     }
-    const result = await this._exec(command);
-    return {
-      command,
-      result
-    }
+    return this._exec(command);
   }
 
   /**

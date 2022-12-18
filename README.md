@@ -34,7 +34,7 @@ const multiResult = await sshTunnel.proxy(['3000:192.168.1.1:3000', '3001:192.16
 //    { localPort: 3001, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000' },
 //    { localPort: 3002, destHost: '192.168.1.1', destPort: 3001, key: '3001:192.168.1.1:3001' },
 // ]
-// And it will auto find a idle local port if the port pass in is useing.
+// And it will auto find a idle local port if the port pass in is using.
 
 ```
 
@@ -62,7 +62,7 @@ const multiResult = await sshTunnel.proxy(['3000:192.168.1.1:3000', '3001:192.16
 //    { localPort: 3001, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000' },
 //    { localPort: 3002, destHost: '192.168.1.1', destPort: 3001, key: '3001:192.168.1.1:3001' },
 // ]
-// And it will auto find a idle local port if the port pass in is useing.
+// And it will auto find a idle local port if the port pass in is using.
 ```
 
 ### command executing

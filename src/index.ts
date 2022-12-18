@@ -12,13 +12,20 @@ enum STATUS {
 }
 
 type ProxyConfig =  {
-  srcPort: number;
+  localPort: number;
   destHost: string;
   destPort: number;
+  key?: string | number;
 }
 
 class SshTunnel {
-  constructor(sshConfig: SshConnectConfig & { socksServer?: string }) {
+  constructor(sshConfig: SshConnectConfig & { 
+    /**
+     * @description socks hopping server for ssh connection 
+     * @example socks5:180.80.80.80:1080
+     */
+    socksServer?: string 
+  }) {
     const { socksServer, ...restConfig } = sshConfig;
     if (socksServer) {
       // 初始化 socks 配置
@@ -51,9 +58,10 @@ class SshTunnel {
   private readonly sshConfig: SshConnectConfig;
 
   private proxyList: {
-    srcPort: number;
+    localPort: number;
     destHost: string;
     destPort: number;
+    key?: string | number;
     server: net.Server;
   }[] = [];
 
@@ -267,20 +275,20 @@ class SshTunnel {
 
   private genSshCommand(proxyConfig: ProxyConfig) {
     const {
-      srcPort,
+      localPort,
       destHost,
       destPort
     } = proxyConfig;
     if (this.socksConfig) {
-      return `ssh -o StrictHostKeyChecking=no -o ProxyCommand="nc -X ${this.socksConfig?.proxy.type} -x ${this.socksConfig?.proxy.host}:${this.socksConfig?.proxy.port} %h %p" -i ~/.ssh/${this.sshConfig.username} ${this.sshConfig.username}@${destHost} -L ${srcPort}:${destHost}:${destPort}`;
+      return `ssh -o StrictHostKeyChecking=no -o ProxyCommand="nc -X ${this.socksConfig?.proxy.type} -x ${this.socksConfig?.proxy.host}:${this.socksConfig?.proxy.port} %h %p" -i ~/.ssh/${this.sshConfig.username} ${this.sshConfig.username}@${destHost} -L ${localPort}:${destHost}:${destPort}`;
     }
-    return `ssh -o StrictHostKeyChecking=no -i ~/.ssh/${this.sshConfig.username} ${this.sshConfig.username}@${destHost} -L ${srcPort}:${destHost}:${destPort}`;
+    return `ssh -o StrictHostKeyChecking=no -i ~/.ssh/${this.sshConfig.username} ${this.sshConfig.username}@${destHost} -L ${localPort}:${destHost}:${destPort}`;
   }
 
   private _proxy = async (proxyConfig: ProxyConfig) => {
-    const { srcPort, destHost, destPort } = proxyConfig;
-    if (this.proxyList.find(item => item.srcPort === srcPort)) {
-      throw new Error(`local srcPort ${srcPort} is proxying`);
+    const { localPort, destHost, destPort, key } = proxyConfig;
+    if (this.proxyList.find(item => item.localPort === localPort)) {
+      throw new Error(`localPort ${localPort} is proxying`);
     }
     // logger.lightWhite(`echo -e "${this.sshConfig.privateKey}" > ~/.ssh/${this.sshConfig.username}`);
     logger.bgBlack(this.genSshCommand(proxyConfig));
@@ -297,7 +305,7 @@ class SshTunnel {
           }
           // 并发 exec(`nc ip port`) 数量在超过 服务器 ssh 设置的最大 channel 数时（一般是 10），会有 Channel open failure 的问题
           // @see https://github.com/mscdex/ssh2/issues/219
-          // forwardOut 的 srcPort 可以为任意数字，不影响
+          // forwardOut 的 localPort 可以为任意数字，不影响
           if (this.sshClient) {
             this.sshClient.forwardOut(
               '127.0.0.1',
@@ -335,23 +343,24 @@ class SshTunnel {
           });
         }
       })
-      .listen(srcPort)
+      .listen(localPort)
       .on('connection', async () => {
         // console.log('connection');
         // this.server?.getConnections((err, count) => {
         //   console.log(`当前有${count}个连接`);
         // })
       }).on('listening', () => {
-        // console.log(`listening ${srcPort}`);
+        // console.log(`listening ${localPort}`);
       });
     this.proxyList.push({
-      srcPort, 
+      localPort, 
       destHost, 
       destPort,
-      server
+      server,
+      key
     });
     logger.cyan(
-      `proxy server listening on 127.0.0.1:${srcPort} => ${destHost}:${destPort}`,
+      `proxy server listening on 127.0.0.1:${localPort} => ${destHost}:${destPort}`,
     );
     process.once('exit', () => {
       console.log('exit');
@@ -373,31 +382,33 @@ class SshTunnel {
       const result: ProxyConfig[] = [];
       await proxyConfig.reduce((pre, config) => {
         return pre.then(async () => {
-          const [srcPort, destHost, destPort] = config.split(':') || [];
-          const localPort = await getAvailablePort(Number(srcPort));
+          const [localPort, destHost, destPort] = config.split(':') || [];
+          const availablePort = await getAvailablePort(Number(localPort));
           const params = {
-            srcPort: localPort,
+            localPort: availablePort,
             destHost,
-            destPort: Number(destPort)
+            destPort: Number(destPort),
+            key: config
           }
           await this._proxy(params);
-          result.push(params)
+          result.push(params);
         });
       }, Promise.resolve());
       return result;
     }
     if (typeof proxyConfig === 'string') {
-      const [srcPort, destHost, destPort] = proxyConfig.split(':');
-      const localPort = await getAvailablePort(Number(srcPort));
+      const [localPort, destHost, destPort] = proxyConfig.split(':');
+      const availablePort = await getAvailablePort(Number(localPort));
       const params: ProxyConfig = {
-        srcPort: localPort,
+        localPort: availablePort,
         destHost,
-        destPort: Number(destPort)
+        destPort: Number(destPort),
+        key: proxyConfig
       }
       await this._proxy(params);
       return params;
     }
-    throw new Error('function proxy params invalid');
+    throw new Error(`params ${proxyConfig} is invalid`);
   }
 
 }

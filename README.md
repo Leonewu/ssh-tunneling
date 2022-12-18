@@ -1,4 +1,4 @@
-# Ssh Tunneling
+# Ssh tunneling for nodejs
 
 A ssh tunneling written in nodejs.
 
@@ -7,7 +7,7 @@ A ssh tunneling written in nodejs.
 - ✨ ***auto reconnect***: A ssh client which can always reconnect automatically by client side.
 - ✨ ***port forward***: Another mainly capacity is ssh tunnel port forwarding even behind a hopping server,such as a socks server.
 - ✨ ***port checking and finding***: If local port is used, the client will find a available local port to proxy.
-- ✨ ***command executing***.
+- ✨ ***command executing***: Execute any linux command.
 
 ### examples
 
@@ -27,14 +27,14 @@ const sshConfig = {
 };
 const sshTunnel = new SshTunnel(sshConfig);
 const result = await sshTunnel.proxy('3000:192.168.1.1:3000');
-console.log(result);
-// { srcPort: 3000, destHost: '192.168.1.1', destPort: 3000 }
+// { localPort: 3000, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000' }
 // or multiple port fowarding if passing an array
 const multiResult = await sshTunnel.proxy(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001']);
 // [
-//    { srcPort: 3000, destHost: '192.168.1.1', destPort: 3000 },
-//    { srcPort: 3001, destHost: '192.168.1.1', destPort: 3001 },
+//    { localPort: 3001, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000' },
+//    { localPort: 3002, destHost: '192.168.1.1', destPort: 3001, key: '3001:192.168.1.1:3001' },
 // ]
+// And it will auto find a idle local port if the port pass in is useing.
 
 ```
 
@@ -55,14 +55,14 @@ const sshConfig = {
 };
 const sshTunnel = new SshTunnel(sshConfig);
 const result = await sshTunnel.proxy('3000:192.168.1.1:3000');
-console.log(result);
-// { srcPort: 3000, destHost: '192.168.1.1', destPort: 3000 }
+// { localPort: 3000, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000' }
 // or multiple port fowarding if passing an array
 const multiResult = await sshTunnel.proxy(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001']);
 // [
-//    { srcPort: 3000, destHost: '192.168.1.1', destPort: 3000 },
-//    { srcPort: 3001, destHost: '192.168.1.1', destPort: 3001 },
+//    { localPort: 3001, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000' },
+//    { localPort: 3002, destHost: '192.168.1.1', destPort: 3001, key: '3001:192.168.1.1:3001' },
 // ]
+// And it will auto find a idle local port if the port pass in is useing.
 ```
 
 ### command executing

@@ -1,8 +1,9 @@
 {
   "private": false,
   "name": "ssh-tunneling",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "a ssh-tunneling client for nodejs",
+  "keywords": ["ssh tunnel", "ssh tunneling", "ssh proxy", "ssh port foward"],
   "main": "dist/index.js",
   "repository": {
     "type": "git",

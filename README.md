@@ -86,7 +86,6 @@ const result = await sshTunnel.exec('uptime');
 
 - `proxy`
 - `exec`
-- `batchExec`
 - `close`
 
 ```typescript
@@ -99,10 +98,11 @@ const sshConfig = {
   privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
 };
 const sshTunnel = new SshTunnel(sshConfig);
-// execute uptime command
-const uptime = await sshTunnel.exec('uptime');
-// execute multiple commands one time
-const batchRes = await sshTunnel.batchExec([
+// execute echo command
+const execRes = await sshTunnel.exec('echo 1');
+// execRes: '1'
+// Also, if passing a command array, it will execute every commands one time and return by order
+const batchRes = await sshTunnel.exec([
   'echo 1',
   'echo 2',
   'echo 3'

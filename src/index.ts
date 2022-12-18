@@ -194,10 +194,7 @@ class SshTunnel {
     return this.sshPromise;
   };
 
-  /**
-   * execute command
-   */
-  public async exec(command: string): Promise<string> {
+  private async _exec(command: string): Promise<string> {
     if (!this.sshClient) {
       await this.createSshClient();
     }
@@ -220,6 +217,35 @@ class SshTunnel {
         });
       });
     });
+  }
+
+  public exec(command: string): Promise<{ command: string; result: string }>
+
+  public exec(command: string[]): Promise<{ command: string; result: string }[]>
+
+  /**
+   * @description execute command
+   * @params a command or commands array
+   * @return If passing one command, it will return the command and result after executed.  
+   * @return If passing a command array, it will return an array by order after all of them were executed.
+   */
+  public async exec(command: any): Promise<any> {
+    if (Array.isArray(command)) {
+      const divider = '__ssh_tunneling_divider__'
+      const combinedCommand = command.join(` && echo ${divider} && `);
+      const res = (await this._exec(combinedCommand)).split(`${divider}\n`);
+      return command.map((item, i) => {
+        return {
+          command: item,
+          result: res[i]
+        }
+      });
+    }
+    const result = await this._exec(command);
+    return {
+      command,
+      result
+    }
   }
 
   /**
@@ -367,12 +393,17 @@ class SshTunnel {
     return proxyConfig;
   };
 
+
+  public proxy(proxyConfig: string): Promise<ProxyConfig>
+
+  public proxy(proxyConfig: string[]): Promise<ProxyConfig[]>
+
   /**
    * @description ssh port forwarding
    * @expample proxy('3000:192.168.1.1:3000')
    * @expample proxy(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001'])
    */
-  public proxy = async (proxyConfig: string | string[]) => {
+  public async proxy (proxyConfig: any): Promise<any> {
     if (Array.isArray(proxyConfig)) {
       const result: ProxyConfig[] = [];
       await proxyConfig.reduce((pre, config) => {
@@ -417,23 +448,6 @@ class SshTunnel {
     }
     const targetList = this.proxyList.filter(item => key ? item.key === key : true);
     targetList.forEach(item => item.server.close());
-  }
-
-  /**
-   * execute multiple commands
-   * @params an array of commands
-   * @return return an executed result array of every command by original order
-   */
-  public batchExec = async (commands: string[]) => {
-    const divider = '__ssh_tunneling_divider__'
-    const combinedCommand = commands.join(` && echo ${divider} && `);
-    const res = (await this.exec(combinedCommand)).split(`${divider}\n`);
-    return commands.map((command, i) => {
-      return {
-        command,
-        result: res[i]
-      }
-    });
   }
 
 }

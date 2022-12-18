@@ -81,3 +81,32 @@ const sshConfig = {
 const sshTunnel = new SshTunnel(sshConfig);
 const result = await sshTunnel.exec('uptime');
 ```
+
+## instance api
+
+- `proxy`
+- `exec`
+- `close`
+
+```typescript
+import { SshTunnel } from 'ssh-tunneling';
+
+const sshConfig = {
+  host: '192.168.1.1',
+  port: 22,
+  username: 'myUsername',
+  privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
+};
+const sshTunnel = new SshTunnel(sshConfig);
+// execute uptime command
+const result = await sshTunnel.exec('uptime');
+// forward local port 3000 to 192.168.1.1:3000
+const proxyRes = sshTunnel.proxy('3000:192.168.1.1:3000');
+// forward multiple port to specific servers
+const proxyResList = sshTunnel.proxy(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001']);
+// or just close one port forwarding server
+sshTunnel.close(result.key);
+// if you don't need ssh tunnel and all the port forwarding server, pass empty params to close it all
+sshTunnel.close();
+
+```

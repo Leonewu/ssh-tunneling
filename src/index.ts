@@ -69,8 +69,6 @@ class SshTunnel {
 
   private sshClient?: SshClient;
 
-  private server?: net.Server;
-
   private socksStatus: STATUS = STATUS.INIT;
 
   private sshStatus: STATUS = STATUS.INIT;
@@ -287,7 +285,7 @@ class SshTunnel {
 
   private _proxy = async (proxyConfig: ProxyConfig) => {
     const { localPort, destHost, destPort, key } = proxyConfig;
-    if (this.proxyList.find(item => item.localPort === localPort)) {
+    if (this.proxyList.find(item => item.localPort === localPort && item.server?.listening)) {
       throw new Error(`localPort ${localPort} is proxying`);
     }
     // logger.lightWhite(`echo -e "${this.sshConfig.privateKey}" > ~/.ssh/${this.sshConfig.username}`);
@@ -346,7 +344,7 @@ class SshTunnel {
       .listen(localPort)
       .on('connection', async () => {
         // console.log('connection');
-        // this.server?.getConnections((err, count) => {
+        // server?.getConnections((err, count) => {
         //   console.log(`当前有${count}个连接`);
         // })
       }).on('listening', () => {
@@ -364,10 +362,7 @@ class SshTunnel {
     );
     process.once('exit', () => {
       console.log('exit');
-      this.sshClient?.destroy();
-      this.socksSocket?.destroy();
-      this.server?.close();
-      this.proxyList.forEach(item => item.server.close());
+      this.close();
     });
     return proxyConfig;
   };
@@ -409,6 +404,19 @@ class SshTunnel {
       return params;
     }
     throw new Error(`params ${proxyConfig} is invalid`);
+  }
+
+  /**
+   * @descrption close tunnel and destroy all the instance
+   * @params key: The server you want to close.If passing empty, it will close all the servers and the main ssh client.
+   */
+  public close = async (key?: string | number) => {
+    if (!key) {
+      this.sshClient?.destroy();
+      this.socksSocket?.destroy();
+    }
+    const targetList = this.proxyList.filter(item => key ? item.key === key : true);
+    targetList.forEach(item => item.server.close());
   }
 
 }

@@ -2,6 +2,12 @@
 
 A ssh tunneling written in nodejs.
 
+## install
+
+```sh
+npm i ssh-tunneling
+```
+
 ## features
 
 - ✨ ***auto reconnect***: A ssh client which can always reconnect automatically by client side.

@@ -3,7 +3,7 @@
   "name": "ssh-tunneling",
   "version": "1.0.9",
   "description": "a ssh-tunneling client for nodejs",
-  "keywords": ["ssh tunnel", "ssh tunneling", "ssh proxy", "ssh port foward"],
+  "keywords": ["ssh tunnel", "ssh tunneling", "ssh proxy", "ssh port forward", "ssh shell exec", "ssh keep-alive"],
   "main": "dist/index.js",
   "repository": {
     "type": "git",

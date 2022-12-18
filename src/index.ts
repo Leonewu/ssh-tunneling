@@ -422,13 +422,18 @@ class SshTunnel {
   /**
    * execute multiple commands
    * @params an array of commands
-   * @return an result array of every command
+   * @return return an executed result array of every command by original order
    */
   public batchExec = async (commands: string[]) => {
     const divider = '__ssh_tunneling_divider__'
-    const command = commands.join(` && echo ${divider} && `);
-    const res = await this.exec(command);
-    return res.split(`${divider}\n`);
+    const combinedCommand = commands.join(` && echo ${divider} && `);
+    const res = (await this.exec(combinedCommand)).split(`${divider}\n`);
+    return commands.map((command, i) => {
+      return {
+        command,
+        result: res[i]
+      }
+    });
   }
 
 }

@@ -107,7 +107,7 @@ const batchRes = await sshTunnel.batchExec([
   'echo 2',
   'echo 3'
 ]);
-// batchRes: [1, 2, 3]
+// batchRes: [{ command: 'echo 1', result: '1' }, { command: 'echo 2', result: '2' }, { command: 'echo 3', result: '3' }]
 // forward local port 3000 to 192.168.1.1:3000
 const proxyRes = sshTunnel.proxy('3000:192.168.1.1:3000');
 // forward multiple port to specific servers

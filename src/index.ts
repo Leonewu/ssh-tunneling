@@ -419,6 +419,18 @@ class SshTunnel {
     targetList.forEach(item => item.server.close());
   }
 
+  /**
+   * execute multiple commands
+   * @params an array of commands
+   * @return an result array of every command
+   */
+  public batchExec = async (commands: string[]) => {
+    const divider = '__ssh_tunneling_divider__'
+    const command = commands.join(` && echo ${divider} && `);
+    const res = await this.exec(command);
+    return res.split(`${divider}\n`);
+  }
+
 }
 
 export { logger, SshTunnel }

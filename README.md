@@ -86,6 +86,7 @@ const result = await sshTunnel.exec('uptime');
 
 - `proxy`
 - `exec`
+- `batchExec`
 - `close`
 
 ```typescript
@@ -99,7 +100,14 @@ const sshConfig = {
 };
 const sshTunnel = new SshTunnel(sshConfig);
 // execute uptime command
-const result = await sshTunnel.exec('uptime');
+const uptime = await sshTunnel.exec('uptime');
+// execute multiple commands one time
+const batchRes = await sshTunnel.batchExec([
+  'echo 1',
+  'echo 2',
+  'echo 3'
+]);
+// batchRes: [1, 2, 3]
 // forward local port 3000 to 192.168.1.1:3000
 const proxyRes = sshTunnel.proxy('3000:192.168.1.1:3000');
 // forward multiple port to specific servers

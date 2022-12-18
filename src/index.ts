@@ -226,7 +226,7 @@ class SshTunnel {
   /**
    * @description execute command
    * @params a command or commands array
-   * @return If passing one command, it will return the command and result after executed.  
+   * @return If passing one command, it will return the result after executed.  
    * @return If passing a command array, it will return an array by order after all of them were executed.
    */
   public async exec(command: any): Promise<any> {

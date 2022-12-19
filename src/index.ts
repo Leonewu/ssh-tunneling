@@ -198,6 +198,11 @@ class SshTunnel {
     if (!this.sshClient) {
       await this.createSshClient();
     }
+    const alive = await this.throttleCheckAlive();
+    if (!alive) {
+      logger.lightWhite('ssh connection was hung up, reconnecting...');
+      await this.createSshClient();
+    }
     let res = '';
     return new Promise((resolve, reject) => {
       this.sshClient?.exec(command, (err, stream) => {
@@ -435,7 +440,7 @@ class SshTunnel {
 
   /**
    * @descrption close tunnel and destroy all the instance
-   * @params key: The server you want to close.If passing empty, it will close all the servers and the main ssh client.
+   * @params key: The server key you want to close.If passing empty, it will close all the servers and the main ssh client.
    */
   public close = async (key?: string | number) => {
     if (!key) {

@@ -96,7 +96,7 @@ console.log(forwardInfo2);
 
 ```
 
-Also, you can pass an array to forward multiple port and it will return the result array too.
+Also, you can pass an array to forward multiple ports and it will return the result array too.
 
 ```typescript
 import { SshTunnel } from 'ssh-tunneling';
@@ -206,7 +206,7 @@ const sshConfig = {
   hoppingServer: 'socks5://180.80.80.80:1080',
 };
 const client = new SshTunnel(sshConfig);
-const forwardIngo = await client.forwardOut('3000:192.168.1.1:3000');
+const forwardInfo = await client.forwardOut('3000:192.168.1.1:3000');
 // { localPort: 3000, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000', type: 'out' }
 ```
 

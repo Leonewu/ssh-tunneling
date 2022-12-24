@@ -24,15 +24,15 @@ class SshTunnel {
      * @description socks hopping server for ssh connection 
      * @example socks5:180.80.80.80:1080
      */
-    socksServer?: string 
+    hoppingServer?: string 
   }) {
-    const { socksServer, ...restConfig } = sshConfig;
-    if (socksServer) {
+    const { hoppingServer, ...restConfig } = sshConfig;
+    if (hoppingServer) {
       // 初始化 socks 配置
       // socks5://180.80.80.80:1080
       const socksReg = /socks(\d):\/\/([\d.]+):(\d+)/;
       const [, hoppingSocksType, hoppingIp, hoppingPort] =
-        socksReg.exec(socksServer) || [];
+        socksReg.exec(hoppingServer) || [];
       if (!hoppingIp || !hoppingPort || !hoppingSocksType) {
         throw new Error('socks服务配置错误');
       }
@@ -63,6 +63,7 @@ class SshTunnel {
     destPort: number;
     key?: string | number;
     server: net.Server;
+    type: 'out' | 'in';
   }[] = [];
 
   private socksSocket?: net.Socket;
@@ -237,8 +238,8 @@ class SshTunnel {
   public async exec(command: any): Promise<any> {
     if (Array.isArray(command)) {
       const divider = '__ssh_tunneling_divider__'
-      const combinedCommand = command.join(` && echo ${divider} && `);
-      const res = (await this._exec(combinedCommand)).split(`${divider}\n`);
+      const combinedCommand = command.join(` && echo -n ${divider} && `);
+      const res = (await this._exec(combinedCommand)).split(divider);
       return command.map((item, i) => {
         return {
           command: item,
@@ -310,7 +311,7 @@ class SshTunnel {
     return `ssh -o StrictHostKeyChecking=no -i ~/.ssh/${this.sshConfig.username} ${this.sshConfig.username}@${destHost} -L ${localPort}:${destHost}:${destPort}`;
   }
 
-  private _proxy = async (proxyConfig: ProxyConfig) => {
+  private _forwardOut = async (proxyConfig: ProxyConfig) => {
     const { localPort, destHost, destPort, key } = proxyConfig;
     if (this.proxyList.find(item => item.localPort === localPort && item.server?.listening)) {
       throw new Error(`localPort ${localPort} is proxying`);
@@ -382,7 +383,8 @@ class SshTunnel {
       destHost, 
       destPort,
       server,
-      key
+      key,
+      type: 'out'
     });
     logger.cyan(
       `proxy server listening on 127.0.0.1:${localPort} => ${destHost}:${destPort}`,
@@ -395,16 +397,16 @@ class SshTunnel {
   };
 
 
-  public proxy(proxyConfig: string): Promise<ProxyConfig>
+  public forwardOut(proxyConfig: string): Promise<ProxyConfig>
 
-  public proxy(proxyConfig: string[]): Promise<ProxyConfig[]>
+  public forwardOut(proxyConfig: string[]): Promise<ProxyConfig[]>
 
   /**
    * @description ssh port forwarding
    * @expample proxy('3000:192.168.1.1:3000')
    * @expample proxy(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001'])
    */
-  public async proxy (proxyConfig: any): Promise<any> {
+  public async forwardOut (proxyConfig: any): Promise<any> {
     if (Array.isArray(proxyConfig)) {
       const result: ProxyConfig[] = [];
       await proxyConfig.reduce((pre, config) => {
@@ -417,7 +419,7 @@ class SshTunnel {
             destPort: Number(destPort),
             key: config
           }
-          await this._proxy(params);
+          await this._forwardOut(params);
           result.push(params);
         });
       }, Promise.resolve());
@@ -432,7 +434,7 @@ class SshTunnel {
         destPort: Number(destPort),
         key: proxyConfig
       }
-      await this._proxy(params);
+      await this._forwardOut(params);
       return params;
     }
     throw new Error(`params ${proxyConfig} is invalid`);

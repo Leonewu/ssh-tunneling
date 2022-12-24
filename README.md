@@ -1,23 +1,177 @@
 # Ssh tunneling for nodejs
 
-A ssh tunneling written in nodejs.
+A ssh tunneling written in nodejs, which can do command executing and port forwarding.
 
-## install
+## Installation
 
 ```sh
 npm i ssh-tunneling
 ```
 
-## features
+## Features
 
-- ✨ ***auto reconnect***: A ssh client which can always reconnect automatically by client side.
-- ✨ ***port forward***: Another mainly capacity is ssh tunnel port forwarding even behind a hopping server,such as a socks server.
-- ✨ ***port checking and finding***: If local port is used, the client will find a available local port to proxy.
-- ✨ ***command executing***: Execute any linux command.
+- ✨ ***connection keep-alive***: Keeping the ssh connection alive whenever you use it.
+- ✨ ***port forwarding***: Ssh tunneling port forward even behind a hopping server,such as a socks server.
+- ✨ ***port checking and finding***: The client will automatically find a available local port to forward when the port is using.
+- ✨ ***command executing***: Execute linux commands.
 
-### examples
+## Api reference
 
-#### simple ssh port forwarding
+### `new SshTunel(config)`
+
+options
+
+- host: [**required**] ssh ip
+- port: [**required**] ssh port
+- username: [**required**] ssh user name
+- privateKey: [**required**] ssh private key
+- hoppingServer: [**optional**] Currently it just supports the socks4 or socks5 server,such as 'socks5://180.80.80.80:1080' or 'socks4://180.80.80.80:1080'
+
+```typescript
+import { SshTunnel } from 'ssh-tunneling';
+
+const sshConfig = {
+  host: '192.168.1.1',
+  port: 22,
+  username: 'myUsername',
+  privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
+};
+const client = new client(sshConfig);
+```
+
+or establish a connection behind a socks5 server
+
+```typescript
+import { SshTunnel } from 'ssh-tunneling';
+
+const sshConfig = {
+  host: '192.168.1.1',
+  port: 22,
+  username: 'myUsername',
+  privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
+  hoppingServer: 'socks://180.80.80.80:1080'
+};
+const client = new client(sshConfig);
+```
+
+### forwardOut
+
+Forward local port to remote port.
+
+```typescript
+import { SshTunnel } from 'ssh-tunneling';
+
+const sshConfig = {
+  host: '192.168.1.1',
+  port: 22,
+  username: 'myUsername',
+  privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
+};
+const client = new client(sshConfig);
+const forwardInfo = client.forwardOut('3000:192.168.1.1:3000');
+console.log(forwardInfo);
+// { localPort: 3000, destPort: 3000, destHost: '192.168.1.1' key: '3000:192.168.1.1:3000' }
+```
+
+If the local port is occupied, it will choose a idle local port to listen and return the info in result.
+
+```typescript
+import { SshTunnel } from 'ssh-tunneling';
+
+const sshConfig = {
+  host: '192.168.1.1',
+  port: 22,
+  username: 'myUsername',
+  privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
+};
+const client = new client(sshConfig);
+const forwardInfo1 = client.forwardOut('3000:192.168.1.1:3000');
+const forwardInfo2 = client.forwardOut('3000:192.168.1.1:3000');
+console.log(forwardInfo1);
+// port 3000 is idle
+// { localPort: 3000, destPort: 3000, destHost: '192.168.1.1' key: '3000:192.168.1.1:3000', type: 'out' }
+console.log(forwardInfo2);
+// port 3000 is using, so it use another idle port 3001
+// { localPort: 3001, destPort: 3000, destHost: '192.168.1.1' key: '3000:192.168.1.1:3000', type: 'out' }
+
+```
+
+Also, you can pass an array to forward multiple port and it will return the result array too.
+
+```typescript
+import { SshTunnel } from 'ssh-tunneling';
+
+const sshConfig = {
+  host: '192.168.1.1',
+  port: 22,
+  username: 'myUsername',
+  privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
+};
+const client = new client(sshConfig);
+const forwardInfo = client.forwardOut(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001']);
+console.log(forwardInfo);
+// output
+// [
+//   { localPort: 3000, destPort: 3000, destHost: '192.168.1.1' key: '3000:192.168.1.1:3000', type: 'out' },
+//   { localPort: 3001, destPort: 3001, destHost: '192.168.1.1' key: '3001:192.168.1.1:3001', type: 'out' },
+// ]
+```
+
+### `exec`
+
+```typescript
+import { SshTunnel } from 'ssh-tunneling';
+
+const sshConfig = {
+  host: '192.168.1.1',
+  port: 22,
+  username: 'myUsername',
+  privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
+};
+const client = new SshTunnel(sshConfig);
+// execute echo command
+const echo = await client.exec('echo 1');
+console.log(echo); 
+// 1
+// Also, if passing a command array, it will execute every commands one time and return by order
+const batchEcho = await sshTunnel.exec([
+  'echo 1',
+  'echo 2',
+  'echo 3'
+]);
+// batchEcho: [{ command: 'echo 1', result: '1' }, { command: 'echo 2', result: '2' }, { command: 'echo 3', result: '3' }]
+
+```
+
+### `close`
+
+Since the ssh connection is established, it can be closed manualy.
+
+- close one server `close(serverKey)`
+- close all server `close()`
+
+```typescript
+import { SshTunnel } from 'ssh-tunneling';
+
+const sshConfig = {
+  host: '192.168.1.1',
+  port: 22,
+  username: 'myUsername',
+  privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
+};
+const client = new SshTunnel(sshConfig);
+// execute echo command
+const echo = await client.exec('echo 1');
+const forwardInfo = client.forwardOut(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001']);
+// close one proxy server
+client.close(forwardInfo[0].key);
+// close all proxy server
+client.close();
+```
+
+## Examples
+
+### Simple ssh port forwarding out
 
 An example that fowarding port 3000 to 192.168.1.1:3000 through a ssh tunnel.  
 The original ssh command is `ssh -L 3000:192.168.1.1:3000 -i ~/.ssh/myPrivateKey myUsername@192.168.1.1`
@@ -31,20 +185,12 @@ const sshConfig = {
   username: 'myUsername',
   privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
 };
-const sshTunnel = new SshTunnel(sshConfig);
-const result = await sshTunnel.proxy('3000:192.168.1.1:3000');
-// { localPort: 3000, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000' }
-// or multiple port fowarding if passing an array
-const multiResult = await sshTunnel.proxy(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001']);
-// [
-//    { localPort: 3001, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000' },
-//    { localPort: 3002, destHost: '192.168.1.1', destPort: 3001, key: '3001:192.168.1.1:3001' },
-// ]
-// And it will auto find a idle local port if the port pass in is using.
-
+const client = new SshTunnel(sshConfig);
+const forwardInfo = await client.forwardOut('3000:192.168.1.1:3000');
+// { localPort: 3000, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000', type: 'out' }
 ```
 
-#### ssh port forwarding through a socks5 server
+### Ssh port forwarding through a socks5 server
 
 An example that fowarding port 3000 to 192.168.1.1:3000 through a ssh tunnel which only can be connect through a sock5 server.  
 The original ssh command is `ssh -o ProxyCommand="nc -X 5 -x 180.80.80.80:1080 %h %p" -L 3000:192.168.1.1:3000 -i ~/.ssh/myPrivateKey myUsername@192.168.1.1`
@@ -57,23 +203,14 @@ const sshConfig = {
   port: 22,
   username: 'myUsername',
   privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
-  socksServer: 'socks5://180.80.80.80:1080',
+  hoppingServer: 'socks5://180.80.80.80:1080',
 };
-const sshTunnel = new SshTunnel(sshConfig);
-const result = await sshTunnel.proxy('3000:192.168.1.1:3000');
-// { localPort: 3000, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000' }
-// or multiple port fowarding if passing an array
-const multiResult = await sshTunnel.proxy(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001']);
-// [
-//    { localPort: 3001, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000' },
-//    { localPort: 3002, destHost: '192.168.1.1', destPort: 3001, key: '3001:192.168.1.1:3001' },
-// ]
-// And it will auto find a idle local port if the port pass in is using.
+const client = new SshTunnel(sshConfig);
+const forwardIngo = await client.forwardOut('3000:192.168.1.1:3000');
+// { localPort: 3000, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000', type: 'out' }
 ```
 
-### command executing
-
-Also, you can execute any command through the ssh client
+### Commands executing
 
 ```typescript
 import { SshTunnel } from 'ssh-tunneling';
@@ -84,43 +221,7 @@ const sshConfig = {
   username: 'myUsername',
   privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
 };
-const sshTunnel = new SshTunnel(sshConfig);
-const result = await sshTunnel.exec('uptime');
-```
-
-## instance api
-
-- `proxy`
-- `exec`
-- `close`
-
-```typescript
-import { SshTunnel } from 'ssh-tunneling';
-
-const sshConfig = {
-  host: '192.168.1.1',
-  port: 22,
-  username: 'myUsername',
-  privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
-};
-const sshTunnel = new SshTunnel(sshConfig);
-// execute echo command
-const execRes = await sshTunnel.exec('echo 1');
-// execRes: '1'
-// Also, if passing a command array, it will execute every commands one time and return by order
-const batchRes = await sshTunnel.exec([
-  'echo 1',
-  'echo 2',
-  'echo 3'
-]);
-// batchRes: [{ command: 'echo 1', result: '1' }, { command: 'echo 2', result: '2' }, { command: 'echo 3', result: '3' }]
-// forward local port 3000 to 192.168.1.1:3000
-const proxyRes = sshTunnel.proxy('3000:192.168.1.1:3000');
-// forward multiple port to specific servers
-const proxyResList = sshTunnel.proxy(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001']);
-// or just close one port forwarding server
-sshTunnel.close(proxyRes.key);
-// if you don't need ssh tunnel and all the port forwarding server, pass empty params to close it all
-sshTunnel.close();
-
+const client = new SshTunnel(sshConfig);
+const result = await client.exec('echo 1');
+// 1
 ```

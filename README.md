@@ -1,6 +1,6 @@
 # Ssh tunneling for nodejs
 
-A ssh tunneling written in nodejs, which can do command executing and port forwarding.
+A ssh tunneling client written in nodejs, which can do command executing and port forwarding.
 
 ## Installation
 
@@ -36,7 +36,7 @@ const sshConfig = {
   username: 'myUsername',
   privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
 };
-const client = new client(sshConfig);
+const client = new SshTunnel(sshConfig);
 ```
 
 or establish a connection behind a socks5 server
@@ -51,10 +51,10 @@ const sshConfig = {
   privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
   hoppingServer: 'socks://180.80.80.80:1080'
 };
-const client = new client(sshConfig);
+const client = new SshTunnel(sshConfig);
 ```
 
-### forwardOut
+### `forwardOut`
 
 Forward local port to remote port.
 
@@ -67,7 +67,7 @@ const sshConfig = {
   username: 'myUsername',
   privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
 };
-const client = new client(sshConfig);
+const client = new SshTunnel(sshConfig);
 const forwardInfo = client.forwardOut('3000:192.168.1.1:3000');
 console.log(forwardInfo);
 // { localPort: 3000, destPort: 3000, destHost: '192.168.1.1' key: '3000:192.168.1.1:3000' }
@@ -84,7 +84,7 @@ const sshConfig = {
   username: 'myUsername',
   privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
 };
-const client = new client(sshConfig);
+const client = new SshTunnel(sshConfig);
 const forwardInfo1 = client.forwardOut('3000:192.168.1.1:3000');
 const forwardInfo2 = client.forwardOut('3000:192.168.1.1:3000');
 console.log(forwardInfo1);
@@ -107,7 +107,7 @@ const sshConfig = {
   username: 'myUsername',
   privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
 };
-const client = new client(sshConfig);
+const client = new SshTunnel(sshConfig);
 const forwardInfo = client.forwardOut(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001']);
 console.log(forwardInfo);
 // output

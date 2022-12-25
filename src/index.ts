@@ -306,9 +306,9 @@ class SshTunnel {
       destPort
     } = proxyConfig;
     if (this.socksConfig) {
-      return `ssh -o StrictHostKeyChecking=no -o ProxyCommand="nc -X ${this.socksConfig?.proxy.type} -x ${this.socksConfig?.proxy.host}:${this.socksConfig?.proxy.port} %h %p" -i ~/.ssh/${this.sshConfig.username} ${this.sshConfig.username}@${destHost} -L ${localPort}:${destHost}:${destPort}`;
+      return `ssh -o StrictHostKeyChecking=no -o ProxyCommand="nc -X ${this.socksConfig?.proxy.type} -x ${this.socksConfig?.proxy.host}:${this.socksConfig?.proxy.port} %h %p" -i ~/.ssh/${this.sshConfig.username} ${this.sshConfig.username}@${this.sshConfig.host} -L ${localPort}:${destHost}:${destPort}`;
     }
-    return `ssh -o StrictHostKeyChecking=no -i ~/.ssh/${this.sshConfig.username} ${this.sshConfig.username}@${destHost} -L ${localPort}:${destHost}:${destPort}`;
+    return `ssh -o StrictHostKeyChecking=no -i ~/.ssh/${this.sshConfig.username} ${this.sshConfig.username}@${this.sshConfig.host} -L ${localPort}:${destHost}:${destPort}`;
   }
 
   private _forwardOut = async (proxyConfig: ProxyConfig) => {

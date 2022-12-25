@@ -3,13 +3,21 @@
   "name": "ssh-tunneling",
   "version": "1.1.0",
   "description": "a ssh-tunneling client for nodejs",
-  "keywords": ["ssh tunnel", "ssh tunneling", "ssh proxy", "ssh port forward", "ssh shell exec", "ssh keep-alive"],
+  "keywords": [
+    "ssh tunnel",
+    "ssh tunneling",
+    "ssh proxy",
+    "ssh port forward",
+    "ssh shell exec",
+    "ssh keep-alive"
+  ],
   "main": "dist/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/Leonewu/ssh-tunneling"
   },
   "scripts": {
+    "test": "sh ./__test__/test.sh",
     "start": "npx -y ts-node ./index.ts",
     "build": "rm -rf dist && tsc"
   },
@@ -19,7 +27,8 @@
     "@types/node": "^18.11.16",
     "socks": "^2.6.2",
     "ssh2": "^1.10.0",
-    "typescript": "^4.9.4"
+    "typescript": "^4.9.4",
+    "node-fetch": "2.6.6"
   },
   "files": [
     "dist"

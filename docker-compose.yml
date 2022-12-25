@@ -1,0 +1,25 @@
+version: '3.7'
+services:
+  ssh:
+    build:
+      context: ./__test__
+      dockerfile: ./ssh_server/Dockerfile
+    ports:
+    - "12345:22"
+    networks:
+      test:
+        ipv4_address: 172.18.0.123
+  socks:
+    build:
+      context: ./__test__
+      dockerfile: ./socks_server/Dockerfile
+    ports:
+     - "12346:1080" 
+    networks:
+      test:
+        ipv4_address: 172.18.0.124
+networks:
+   test:
+      ipam:
+         config:
+         - subnet: 172.18.0.0/24

@@ -15,7 +15,7 @@ type ProxyConfig =  {
   localPort: number;
   destHost: string;
   destPort: number;
-  key?: string | number;
+  id: string | number;
 }
 
 class SshTunnel {
@@ -61,7 +61,7 @@ class SshTunnel {
     localPort: number;
     destHost: string;
     destPort: number;
-    key?: string | number;
+    id?: string | number;
     server: net.Server;
     type: 'out' | 'in';
   }[] = [];
@@ -312,9 +312,9 @@ class SshTunnel {
   }
 
   private _forwardOut = async (proxyConfig: ProxyConfig) => {
-    const { localPort, destHost, destPort, key } = proxyConfig;
-    if (this.proxyList.find(item => item.localPort === localPort && item.server?.listening)) {
-      throw new Error(`localPort ${localPort} is proxying`);
+    const { localPort, destHost, destPort, id } = proxyConfig;
+    if (this.proxyList.find(item => item.id === id)) {
+      throw new Error(`id ${id} is duplicated, use another one please`);
     }
     // logger.lightWhite(`echo -e "${this.sshConfig.privateKey}" > ~/.ssh/${this.sshConfig.username}`);
     logger.bgBlack(this.genSshCommand(proxyConfig));
@@ -383,14 +383,14 @@ class SshTunnel {
       destHost, 
       destPort,
       server,
-      key,
+      id,
       type: 'out'
     });
     logger.cyan(
       `proxy server listening on 127.0.0.1:${localPort} => ${destHost}:${destPort}`,
     );
     process.once('exit', () => {
-      console.log('exit');
+      logger.lightWhite(`proxy server ${id} exit`);
       this.close();
     });
     return proxyConfig;
@@ -399,7 +399,11 @@ class SshTunnel {
 
   public forwardOut(proxyConfig: string): Promise<ProxyConfig>
 
+  public forwardOut(proxyConfig: { id: string | number, proxy: string }): Promise<ProxyConfig>
+
   public forwardOut(proxyConfig: string[]): Promise<ProxyConfig[]>
+
+  public forwardOut(proxyConfig: { id: string | number, proxy: string }[]): Promise<ProxyConfig[]>
 
   /**
    * @description ssh port forwarding
@@ -411,13 +415,27 @@ class SshTunnel {
       const result: ProxyConfig[] = [];
       await proxyConfig.reduce((pre, config) => {
         return pre.then(async () => {
-          const [localPort, destHost, destPort] = config.split(':') || [];
-          const availablePort = await getAvailablePort(Number(localPort));
+          let localPort: string = '';
+          let destHost: string = '';
+          let destPort: string = '';
+          let id: string | number = '';
+          if (typeof config === 'string') {
+            [localPort, destHost, destPort] = config.split(':') || [];
+            id = config;
+          }
+          if (Object.prototype.toString.call(config) === '[object Object]') {
+            [localPort, destHost, destPort] = config.proxy.split(':') || [];
+            id = config.id;
+          }
+          if ([localPort, destHost, destPort, id].some(s => !s)) {
+            throw new Error(`params ${typeof proxyConfig === 'string' ? proxyConfig :JSON.stringify(proxyConfig)} is invalid`)
+          }
+          localPort = await getAvailablePort(Number(localPort));
           const params = {
-            localPort: availablePort,
+            localPort: Number(localPort),
             destHost,
             destPort: Number(destPort),
-            key: config
+            id
           }
           await this._forwardOut(params);
           result.push(params);
@@ -432,7 +450,19 @@ class SshTunnel {
         localPort: availablePort,
         destHost,
         destPort: Number(destPort),
-        key: proxyConfig
+        id: proxyConfig
+      }
+      await this._forwardOut(params);
+      return params;
+    }
+    if (Object.prototype.toString.call(proxyConfig) === '[object Object]') {
+      const [localPort, destHost, destPort] = proxyConfig.proxy.split(':') || [];
+      const availablePort = await getAvailablePort(Number(localPort));
+      const params: ProxyConfig = {
+        localPort: availablePort,
+        destHost,
+        destPort: Number(destPort),
+        id: proxyConfig.id
       }
       await this._forwardOut(params);
       return params;
@@ -444,12 +474,12 @@ class SshTunnel {
    * @descrption close tunnel and destroy all the instance
    * @params key: The server key you want to close.If passing empty, it will close all the servers and the main ssh client.
    */
-  public close = async (key?: string | number) => {
-    if (!key) {
+  public close = async (id?: string | number) => {
+    if (!id) {
       this.sshClient?.destroy();
       this.socksSocket?.destroy();
     }
-    const targetList = this.proxyList.filter(item => key ? item.key === key : true);
+    const targetList = this.proxyList.filter(item => id ? item.id === id : true);
     targetList.forEach(item => item.server.close());
   }
 

@@ -68,9 +68,16 @@ const sshConfig = {
   privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
 };
 const client = new SshTunnel(sshConfig);
-const forwardInfo = client.forwardOut('3000:192.168.1.1:3000');
-console.log(forwardInfo);
-// { localPort: 3000, destPort: 3000, destHost: '192.168.1.1' key: '3000:192.168.1.1:3000' }
+const forwardInfo1 = client.forwardOut('3000:192.168.1.1:3000');
+console.log(forwardInfo1);
+// { localPort: 3000, destPort: 3000, destHost: '192.168.1.1', id: '3000:192.168.1.1:3000', type: 'out' }
+// or passing an id, it'll use that id.
+const forwardInfo2 = await client.forwardOut({
+  id: 'my-id',
+  proxy: '3001:192.168.1.1:3000'
+});
+console.log(forwardInfo2);
+// { localPort: 3000, destPort: 3000, destHost: '192.168.1.1', id: 'my-id', type: 'out' }
 ```
 
 If the local port is occupied, it will choose a idle local port to listen and return the info in result.
@@ -89,10 +96,10 @@ const forwardInfo1 = client.forwardOut('3000:192.168.1.1:3000');
 const forwardInfo2 = client.forwardOut('3000:192.168.1.1:3000');
 console.log(forwardInfo1);
 // port 3000 is idle
-// { localPort: 3000, destPort: 3000, destHost: '192.168.1.1' key: '3000:192.168.1.1:3000', type: 'out' }
+// { localPort: 3000, destPort: 3000, destHost: '192.168.1.1', id: '3000:192.168.1.1:3000', type: 'out' }
 console.log(forwardInfo2);
 // port 3000 is using, so it use another idle port 3001
-// { localPort: 3001, destPort: 3000, destHost: '192.168.1.1' key: '3000:192.168.1.1:3000', type: 'out' }
+// { localPort: 3001, destPort: 3000, destHost: '192.168.1.1', id: '3000:192.168.1.1:3000', type: 'out' }
 
 ```
 
@@ -108,12 +115,28 @@ const sshConfig = {
   privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
 };
 const client = new SshTunnel(sshConfig);
-const forwardInfo = client.forwardOut(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001']);
-console.log(forwardInfo);
-// output
+const forwardInfo1 = client.forwardOut(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001']);
+console.log(forwardInfo1);
 // [
-//   { localPort: 3000, destPort: 3000, destHost: '192.168.1.1' key: '3000:192.168.1.1:3000', type: 'out' },
-//   { localPort: 3001, destPort: 3001, destHost: '192.168.1.1' key: '3001:192.168.1.1:3001', type: 'out' },
+//   { localPort: 3000, destPort: 3000, destHost: '192.168.1.1', id: '3000:192.168.1.1:3000', type: 'out' },
+//   { localPort: 3001, destPort: 3001, destHost: '192.168.1.1', id: '3001:192.168.1.1:3001', type: 'out' },
+// ]
+
+// or passing an id and it'll use that id
+const forwardInfo2 = client.forwardOut([
+  {
+    id: 'my-id-1',
+    proxy: '3000:192.168.1.1:3000'
+  },
+  {
+    id: 'my-id-2',
+    proxy: '3001:192.168.1.1:3000'
+  }
+]);
+console.log(forwardInfo2);
+// [
+//   { localPort: 3000, destPort: 3000, destHost: '192.168.1.1', id: 'my-id-1', type: 'out' },
+//   { localPort: 3001, destPort: 3001, destHost: '192.168.1.1', id: 'my-id-2', type: 'out' },
 // ]
 ```
 
@@ -164,7 +187,7 @@ const client = new SshTunnel(sshConfig);
 const echo = await client.exec('echo 1');
 const forwardInfo = client.forwardOut(['3000:192.168.1.1:3000', '3001:192.168.1.1:3001']);
 // close one proxy server
-client.close(forwardInfo[0].key);
+client.close(forwardInfo[0].id);
 // close all proxy server
 client.close();
 ```
@@ -187,7 +210,7 @@ const sshConfig = {
 };
 const client = new SshTunnel(sshConfig);
 const forwardInfo = await client.forwardOut('3000:192.168.1.1:3000');
-// { localPort: 3000, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000', type: 'out' }
+// { localPort: 3000, destHost: '192.168.1.1', destPort: 3000, id: '3000:192.168.1.1:3000', type: 'out' }
 ```
 
 ### Ssh port forwarding through a socks5 server
@@ -207,7 +230,7 @@ const sshConfig = {
 };
 const client = new SshTunnel(sshConfig);
 const forwardInfo = await client.forwardOut('3000:192.168.1.1:3000');
-// { localPort: 3000, destHost: '192.168.1.1', destPort: 3000, key: '3000:192.168.1.1:3000', type: 'out' }
+// { localPort: 3000, destHost: '192.168.1.1', destPort: 3000, id: '3000:192.168.1.1:3000', type: 'out' }
 ```
 
 ### Commands executing
@@ -225,3 +248,9 @@ const client = new SshTunnel(sshConfig);
 const result = await client.exec('echo 1');
 // 1
 ```
+
+## coming soon
+
+- support private key path, password
+- forward in
+- ssh server hopping

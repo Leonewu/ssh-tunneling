@@ -96,6 +96,11 @@ type Logger = Record<Color, (content: any, options?: { newLine?: boolean }) => v
     type?: Color,
     content: any,
   }[]) => void;
+
+  lineGradient: (content: string) => void;
+
+  // lineGradient: (content: string[]) => void;
+
 }
 
 
@@ -111,12 +116,69 @@ const logger: Logger = {
       });
     }
     return pre;
-  }, {} as Omit<Logger, 'line'>),
+  }, {} as Omit<Logger, 'line' | 'lineGradient'>),
 
   line(logs) {
     logs.forEach((log, i) => {
       logger[log.type || 'info'](log.content, { newLine: i === logs.length - 1 });
     });
+  },
+
+  lineGradient(content: string) {
+    const lines = content.split('\n');
+    // const colors = [
+    //   40, 41, 42, 43, 44, 45,
+    //   81, 117, 153, 189, 225
+    // ]
+    // const colors1 = [
+    //   51, 87, 123, 159, 195, 231,
+    //   230, 229, 228, 227, 226
+    // ]
+    // const colors2 = [
+    //   45, 81, 117, 153, 189, 225,
+    //   224, 223, 222, 221, 220
+    // ]
+    const generateColors = (start: number) => {
+      // start 为右上角的色值，按照顺时针
+      // 上下相差 36，左右相差 1
+      const right = new Array(6).fill(0).map((_, i) => start + (36 * i));
+      const bottom = new Array(5).fill(0).map((_, i) => right[right.length - 1] - i - 1);
+      const left = new Array(5).fill(0).map((_, i) =>  bottom[bottom.length - 1] - (36 * (i + 1)));
+      const top = new Array(5).fill(0).map((_, i) =>  left[left.length - 1] + i + 1);
+      // 色卡中有5个方块
+      const trbl = [
+        ...top,
+        ...right,
+        ...bottom,
+        ...left,
+      ];
+      const rblt = [
+        ...right,
+        ...bottom,
+        ...left,
+        ...top
+      ]
+      const bltr = [
+        ...bottom,
+        ...left,
+        ...top,
+        ...right,
+      ]
+      const ltrb = [
+        ...left,
+        ...top,
+        ...right,
+        ...bottom,
+      ] 
+      return trbl;
+    }
+    const colors = generateColors(51);
+    lines.forEach((str, i) => {
+      colorOutput({
+        content: str,
+        fontColor: colors[i]
+      });
+    })
   }
   
 };
@@ -124,5 +186,31 @@ const logger: Logger = {
 
 // logger.line(Object.keys(config).map((type: any) => ({ type, content: type })));
 
+// const magic1 =
+// `
+//  ▄▄▄▄███▄▄▄▄      ▄████████    ▄██████▄   ▄█   ▄████████
+// ▄██▀▀▀███▀▀▀██▄   ███    ███   ███    ███ ███  ███    ███
+// ███   ███   ███   ███    ███   ███    █▀  ███▌ ███    █▀
+// ███   ███   ███   ███    ███  ▄███        ███▌ ███
+// ███   ███   ███ ▀███████████ ▀▀███ ████▄  ███▌ ███
+// ███   ███   ███   ███    ███   ███    ███ ███  ███    █▄
+// ███   ███   ███   ███    ███   ███    ███ ███  ███    ███
+//  ▀█   ███   █▀    ███    █▀    ████████▀  █▀   ████████▀
+
+//  `;
+// const magic = `
+// ███╗   ███╗ █████╗  ██████╗ ██╗ ██████╗██╗
+// ████╗ ████║██╔══██╗██╔════╝ ██║██╔════╝██║
+// ██╔████╔██║███████║██║  ███╗██║██║     ██║
+// ██║╚██╔╝██║██╔══██║██║   ██║██║██║     ╚═╝
+// ██║ ╚═╝ ██║██║  ██║╚██████╔╝██║╚██████╗██╗
+// ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝ ╚═════╝╚═╝
+//                                           `
+
+// logger.lineGradient(magic1);
+// logger.lineGradient(magic);
 
 export default logger;
+
+
+

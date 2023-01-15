@@ -91,6 +91,7 @@ const config: Record<Color, [number, number]>  = {
   bgMint: [0, 48],
 }
 
+type ChainLogger = Record<Color, (content: any) => ChainLogger> & { endLine: () => void; };
 
 type Logger = Record<Color, (content: any, options?: { newLine?: boolean }) => void> & {
   /** log one line */
@@ -98,6 +99,8 @@ type Logger = Record<Color, (content: any, options?: { newLine?: boolean }) => v
     type?: Color,
     content: any,
   }[]) => void;
+
+  startLine: () => ChainLogger;
 
   lineGradient: (content: string) => void;
 
@@ -118,14 +121,34 @@ const logger: Logger = {
       });
     }
     return pre;
-  }, {} as Omit<Logger, 'line' | 'lineGradient'>),
+  }, {} as Omit<Logger, 'line' | 'lineGradient' | 'startLine'>),
 
   line(logs) {
     logs.forEach((log, i) => {
       logger[log.type || 'info'](log.content, { newLine: i === logs.length - 1 });
     });
   },
-
+  startLine() {
+    const newLogger = {
+      ...Object.entries(config).reduce((pre, [type, config]) => {
+        const [fontColor, bgColor] = config;
+        pre[type] = (content) => {
+          colorOutput({
+            fontColor: fontColor || undefined,
+            bgColor: bgColor || undefined,
+            newLine: false,
+            content
+          });
+          return newLogger;
+        }
+        return pre;
+      }, {} as ChainLogger),
+      endLine() {
+        console.log('');
+      }
+    }
+    return newLogger;
+  },
   lineGradient(content: string) {
     const lines = content.split('\n');
     // const colors = [
@@ -212,6 +235,10 @@ const logger: Logger = {
 // ██║ ╚═╝ ██║██║  ██║╚██████╔╝██║╚██████╗██╗
 // ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝ ╚═════╝╚═╝
 //                                           `);
+
+// logger.startLine().success('a').bgBlue(1).endLine();
+
+
 
 export default logger;
 

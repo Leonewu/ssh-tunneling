@@ -15,22 +15,24 @@ npm i ssh-tunneling
 - ✨ ***port checking and finding***: The client will automatically find a available local port to forward when the port is using.
 - ✨ ***command executing***: Execute linux commands.
 
-## Api reference
+## API
 
 ### `new SshTunel(config)`
 
 options
 
-- host: [**required**] ssh ip
-- port: [**required**] ssh port
-- username: [**required**] ssh user name
-- privateKey: [**required**] ssh private key
+- host: <**required**> ssh ip
+- port: <**required**> ssh port
+- username: <**required**> ssh user name
+- privateKey: [**optional**] ssh private key
+- password: [**optional**] ssh password
 - hoppingServer: [**optional**] Currently it just supports the socks4 or socks5 server,such as 'socks5://180.80.80.80:1080' or 'socks4://180.80.80.80:1080'
 
 ```typescript
 import { SshTunnel } from 'ssh-tunneling';
+import type { SshConfig } from 'ssh-tunneling';
 
-const sshConfig = {
+const sshConfig: SshConfig = {
   host: '192.168.1.1',
   port: 22,
   username: 'myUsername',
@@ -43,12 +45,15 @@ or establish a connection behind a socks5 server
 
 ```typescript
 import { SshTunnel } from 'ssh-tunneling';
+import type { SshConfig } from 'ssh-tunneling';
 
-const sshConfig = {
+const sshConfig: SshConfig = {
   host: '192.168.1.1',
   port: 22,
   username: 'myUsername',
   privateKey: fs.readFileSync('~/.ssh/myPrivateKey'),
+  // or password
+  // password: 'myPassword',
   hoppingServer: 'socks://180.80.80.80:1080'
 };
 const client = new SshTunnel(sshConfig);
@@ -60,8 +65,9 @@ Forward local port to remote port.
 
 ```typescript
 import { SshTunnel } from 'ssh-tunneling';
+import type { SshConfig } from 'ssh-tunneling';
 
-const sshConfig = {
+const sshConfig: SshConfig = {
   host: '192.168.1.1',
   port: 22,
   username: 'myUsername',
@@ -84,8 +90,9 @@ If the local port is occupied, it will choose a idle local port to listen and re
 
 ```typescript
 import { SshTunnel } from 'ssh-tunneling';
+import type { SshConfig } from 'ssh-tunneling';
 
-const sshConfig = {
+const sshConfig: SshConfig = {
   host: '192.168.1.1',
   port: 22,
   username: 'myUsername',
@@ -107,8 +114,9 @@ Also, you can pass an array to forward multiple ports and it will return the res
 
 ```typescript
 import { SshTunnel } from 'ssh-tunneling';
+import type { SshConfig } from 'ssh-tunneling';
 
-const sshConfig = {
+const sshConfig: SshConfig = {
   host: '192.168.1.1',
   port: 22,
   username: 'myUsername',
@@ -144,8 +152,9 @@ console.log(forwardInfo2);
 
 ```typescript
 import { SshTunnel } from 'ssh-tunneling';
+import type { SshConfig } from 'ssh-tunneling';
 
-const sshConfig = {
+const sshConfig: SshConfig = {
   host: '192.168.1.1',
   port: 22,
   username: 'myUsername',
@@ -175,8 +184,9 @@ Since the ssh connection is established, it can be closed manualy.
 
 ```typescript
 import { SshTunnel } from 'ssh-tunneling';
+import type { SshConfig } from 'ssh-tunneling';
 
-const sshConfig = {
+const sshConfig: SshConfig = {
   host: '192.168.1.1',
   port: 22,
   username: 'myUsername',
@@ -201,8 +211,9 @@ The original ssh command is `ssh -L 3000:192.168.1.1:3000 -i ~/.ssh/myPrivateKey
 
 ```typescript
 import { SshTunnel } from 'ssh-tunneling';
+import type { SshConfig } from 'ssh-tunneling';
 
-const sshConfig = {
+const sshConfig: SshConfig = {
   host: '192.168.1.1',
   port: 22,
   username: 'myUsername',
@@ -220,8 +231,9 @@ The original ssh command is `ssh -o ProxyCommand="nc -X 5 -x 180.80.80.80:1080 %
 
 ```typescript
 import { SshTunnel } from 'ssh-tunneling';
+import type { SshConfig } from 'ssh-tunneling';
 
-const sshConfig = {
+const sshConfig: SshConfig = {
   host: '192.168.1.1',
   port: 22,
   username: 'myUsername',
@@ -237,8 +249,9 @@ const forwardInfo = await client.forwardOut('3000:192.168.1.1:3000');
 
 ```typescript
 import { SshTunnel } from 'ssh-tunneling';
+import type { SshConfig } from 'ssh-tunneling';
 
-const sshConfig = {
+const sshConfig: SshConfig = {
   host: '192.168.1.1',
   port: 22,
   username: 'myUsername',
@@ -251,6 +264,5 @@ const result = await client.exec('echo 1');
 
 ## coming soon
 
-- support private key path, password
 - forward in
 - ssh server hopping

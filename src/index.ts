@@ -18,14 +18,16 @@ type ProxyConfig =  {
   id: string | number;
 }
 
+export type SshConfig = SshConnectConfig & { 
+  /**
+   * @description socks hopping server for ssh connection 
+   * @example socks5:180.80.80.80:1080
+   */
+  hoppingServer?: string 
+}
+
 class SshTunnel {
-  constructor(sshConfig: SshConnectConfig & { 
-    /**
-     * @description socks hopping server for ssh connection 
-     * @example socks5:180.80.80.80:1080
-     */
-    hoppingServer?: string 
-  }) {
+  constructor(sshConfig: SshConfig) {
     const { hoppingServer, ...restConfig } = sshConfig;
     if (hoppingServer) {
       // 初始化 socks 配置
@@ -201,7 +203,7 @@ class SshTunnel {
     }
     const alive = await this.throttleCheckAlive();
     if (!alive) {
-      logger.lightWhite('ssh connection was hung up, reconnecting...');
+      logger.white('ssh connection was hung up, reconnecting...');
       await this.createSshClient();
     }
     let res = '';
@@ -306,9 +308,9 @@ class SshTunnel {
       destPort
     } = proxyConfig;
     if (this.socksConfig) {
-      return `ssh -o StrictHostKeyChecking=no -o ProxyCommand="nc -X ${this.socksConfig?.proxy.type} -x ${this.socksConfig?.proxy.host}:${this.socksConfig?.proxy.port} %h %p" -i ~/.ssh/${this.sshConfig.username} ${this.sshConfig.username}@${this.sshConfig.host} -L ${localPort}:${destHost}:${destPort}`;
+      return `ssh -o StrictHostKeyChecking=no -o ProxyCommand="nc -X ${this.socksConfig?.proxy.type} -x ${this.socksConfig?.proxy.host}:${this.socksConfig?.proxy.port} %h %p" ${this.sshConfig.username}@${this.sshConfig.host} -L ${localPort}:${destHost}:${destPort}`;
     }
-    return `ssh -o StrictHostKeyChecking=no -i ~/.ssh/${this.sshConfig.username} ${this.sshConfig.username}@${this.sshConfig.host} -L ${localPort}:${destHost}:${destPort}`;
+    return `ssh -o StrictHostKeyChecking=no ${this.sshConfig.username}@${this.sshConfig.host} -L ${localPort}:${destHost}:${destPort}`;
   }
 
   private _forwardOut = async (proxyConfig: ProxyConfig) => {
@@ -316,7 +318,6 @@ class SshTunnel {
     if (this.proxyList.find(item => item.id === id)) {
       throw new Error(`id ${id} is duplicated, use another one please`);
     }
-    // logger.lightWhite(`echo -e "${this.sshConfig.privateKey}" > ~/.ssh/${this.sshConfig.username}`);
     logger.bgBlack(this.genSshCommand(proxyConfig));
     if (!this.sshClient) {
       await this.createSshClient();
@@ -326,7 +327,7 @@ class SshTunnel {
         try {
           const alive = await this.throttleCheckAlive();
           if (!alive) {
-            logger.lightWhite('ssh connection was hung up, reconnecting...');
+            logger.white('ssh connection was hung up, reconnecting...');
             await this.createSshClient();
           }
           // 并发 exec(`nc ip port`) 数量在超过 服务器 ssh 设置的最大 channel 数时（一般是 10），会有 Channel open failure 的问题
@@ -340,10 +341,10 @@ class SshTunnel {
               destPort,
               (err, stream) => {
                 if (err) {
-                  logger.warn('forwardout err', err.message);
+                  logger.warn(`${id} forwardout err: `, err.message);
                   if (err.message?.includes('Connection refused')) {
                     logger.bgRed(
-                      `朋友，检查一下目标服务器端口 ${destHost}:${destPort} 是否正常`,
+                      `朋友，检查一下目标服务器端口 ${id} ${destHost}:${destPort} 是否正常`,
                     );
                   }
                   netSocket.end();
@@ -362,7 +363,7 @@ class SshTunnel {
           }
         } catch (e) {
           logger.warn(e.message);
-          logger.lightWhite('ssh connection was hung up, reconnecting...');
+          logger.white('ssh connection was hung up, reconnecting...');
           this.createSshClient().catch(err => {
             logger.warn(err.message);
             netSocket.end();
@@ -386,11 +387,11 @@ class SshTunnel {
       id,
       type: 'out'
     });
-    logger.cyan(
-      `proxy server listening on 127.0.0.1:${localPort} => ${destHost}:${destPort}`,
+    logger.success(
+      `proxy server ${id} listening on 127.0.0.1:${localPort} => ${destHost}:${destPort}`,
     );
     process.once('exit', () => {
-      logger.lightWhite(`proxy server ${id} exit`);
+      logger.white(`proxy server ${id} exit`);
       this.close();
     });
     return proxyConfig;

@@ -26,3 +26,17 @@ export const getAvailablePort = async (port: number) => {
   }
   return port;
 }
+
+export function padRight(str: string, length: number, padStr?: string) {
+  if (isNaN(str.length) || length - str.length < 0) {
+    return str;
+  }
+  return `${str}${(padStr || ' ').repeat(length - str.length)}`;
+}
+
+export function padLeft(str: string, length: number, padStr?: string) {
+  if (isNaN(str.length) || length - str.length < 0) {
+    return str;
+  }
+  return `${(padStr || ' ').repeat(length - str.length)}${str}`;
+}

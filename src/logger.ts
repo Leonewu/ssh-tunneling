@@ -57,7 +57,7 @@ function colorOutput(options: { fontColor?: number; bgColor?: number; newLine?: 
 
 type Color = 'success' | 'error' | 'info' | 'warn' | 'white' | 'bgWhite' | 'cyan' | 'bgCyan' | 'black' |
   'bgBlack' | 'red' | 'bgRed' | 'purple' | 'bgPurple' | 'blue' | 'bgBlue' | 'pink' | 'bgPink' | 
-   'green' | 'bgGreen' | 'yellow' | 'bgYellow' | 'orange' | 'bgOrange' | 'gray' | 'bgGray';
+   'green' | 'bgGreen' | 'yellow' | 'bgYellow' | 'orange' | 'bgOrange' | 'gray' | 'bgGray' | 'mint' | 'bgMint';
 
 
 const config: Record<Color, [number, number]>  = {
@@ -86,7 +86,9 @@ const config: Record<Color, [number, number]>  = {
   orange: [202, 0],
   bgOrange: [0, 202],  
   gray: [232, 0],
-  bgGray: [0, 232]
+  bgGray: [0, 232],
+  mint: [48, 0],
+  bgMint: [0, 48],
 }
 
 
@@ -138,6 +140,10 @@ const logger: Logger = {
     //   45, 81, 117, 153, 189, 225,
     //   224, 223, 222, 221, 220
     // ]
+    // const c = [
+    //   51, 87, 123, 159, 195, 231,
+    //   230, 194,158, 122, 86, 50
+    // ]
     const generateColors = (start: number) => {
       // start 为右上角的色值，按照顺时针
       // 上下相差 36，左右相差 1
@@ -186,29 +192,26 @@ const logger: Logger = {
 
 // logger.line(Object.keys(config).map((type: any) => ({ type, content: type })));
 
-// const magic1 =
-// `
-//  ▄▄▄▄███▄▄▄▄      ▄████████    ▄██████▄   ▄█   ▄████████
-// ▄██▀▀▀███▀▀▀██▄   ███    ███   ███    ███ ███  ███    ███
-// ███   ███   ███   ███    ███   ███    █▀  ███▌ ███    █▀
-// ███   ███   ███   ███    ███  ▄███        ███▌ ███
-// ███   ███   ███ ▀███████████ ▀▀███ ████▄  ███▌ ███
-// ███   ███   ███   ███    ███   ███    ███ ███  ███    █▄
-// ███   ███   ███   ███    ███   ███    ███ ███  ███    ███
-//  ▀█   ███   █▀    ███    █▀    ████████▀  █▀   ████████▀
-
-//  `;
-// const magic = `
+// logger.lineGradient(
+//   `
+//    ▄▄▄▄███▄▄▄▄      ▄████████    ▄██████▄   ▄█   ▄████████
+//   ▄██▀▀▀███▀▀▀██▄   ███    ███   ███    ███ ███  ███    ███
+//   ███   ███   ███   ███    ███   ███    █▀  ███▌ ███    █▀
+//   ███   ███   ███   ███    ███  ▄███        ███▌ ███
+//   ███   ███   ███ ▀███████████ ▀▀███ ████▄  ███▌ ███
+//   ███   ███   ███   ███    ███   ███    ███ ███  ███    █▄
+//   ███   ███   ███   ███    ███   ███    ███ ███  ███    ███
+//    ▀█   ███   █▀    ███    █▀    ████████▀  █▀   ████████▀
+  
+//    `);
+// logger.lineGradient(`
 // ███╗   ███╗ █████╗  ██████╗ ██╗ ██████╗██╗
 // ████╗ ████║██╔══██╗██╔════╝ ██║██╔════╝██║
 // ██╔████╔██║███████║██║  ███╗██║██║     ██║
 // ██║╚██╔╝██║██╔══██║██║   ██║██║██║     ╚═╝
 // ██║ ╚═╝ ██║██║  ██║╚██████╔╝██║╚██████╗██╗
 // ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝ ╚═════╝╚═╝
-//                                           `
-
-// logger.lineGradient(magic1);
-// logger.lineGradient(magic);
+//                                           `);
 
 export default logger;
 

@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "ssh-tunneling",
-  "version": "1.1.9",
+  "version": "1.1.10",
   "description": "a ssh-tunneling client for nodejs",
   "keywords": [
     "ssh tunnel",
@@ -23,7 +23,7 @@
   },
   "author": "leon",
   "license": "ISC",
-  "devDependencies": {
+  "dependencies": {
     "socks": "^2.6.2",
     "ssh2": "^1.10.0"
   },

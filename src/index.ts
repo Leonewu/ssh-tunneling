@@ -378,6 +378,8 @@ class SshTunnel {
         // })
       }).on('listening', () => {
         // console.log(`listening ${localPort}`);
+      }).on('close', () => {
+        logger.gray(`proxy server ${id} is closed`);
       });
     this.proxyList.push({
       localPort, 
@@ -388,12 +390,8 @@ class SshTunnel {
       type: 'out'
     });
     logger.success(
-      `proxy server ${id} listening on 127.0.0.1:${localPort} => ${destHost}:${destPort}`,
+      `proxy server ${id} is listening on 127.0.0.1:${localPort} => ${destHost}:${destPort}`,
     );
-    process.once('exit', () => {
-      logger.white(`proxy server ${id} exit`);
-      this.close();
-    });
     return proxyConfig;
   };
 

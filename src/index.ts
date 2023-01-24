@@ -350,12 +350,33 @@ class SshTunnel {
                   netSocket.end();
                   return;
                 }
-                netSocket.pipe(stream);
-                stream.pipe(netSocket);
+                // https://stackoverflow.com/questions/17245881/how-do-i-debug-error-econnreset-in-node-js
+                // if no error hanlder, it may occur this error which casued by client side.
+                // Then the local server will exit.
+                // Error: read ECONNRESET
+                // at TCP.onStreamRead (node:internal/stream_base_commons:217:20) {
+                //   errno: -54,
+                //   code: 'ECONNRESET',
+                //   syscall: 'read'
+                // }
+                netSocket.on('error', err => {
+                  console.log('[ssh-tunneling]: local socket error\n', err);
+                });
+                stream.on('error', err => {
+                  console.log('[ssh-tunneling]: remote stream error\n', err);
+                });
+                // pipeline(netSocket, stream);
+                // pipeline(stream, netSocket);
+                // netSocket.pipe(stream);
+                // stream.pipe(netSocket);
+                // netSocket.on('data', data => {
+                //   logger.orange(`local data, ${data.toString('utf8')}`)
+                //   stream.write(data);
+                // })
                 // stream.on('data', data => {
-                //   // console.log('data', data.toString('utf8'));
+                //   logger.green(`remote data, ${data.toString('utf8')}`)
                 //   netSocket.write(data);
-                // });
+                // })
               },
             );
           } else {

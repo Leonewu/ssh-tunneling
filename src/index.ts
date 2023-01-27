@@ -52,7 +52,12 @@ class SshTunnel {
         timeout: 10000,
       };
     }
-    this.sshConfig = restConfig;
+    this.sshConfig = {
+      ...restConfig,
+      // debug(info) {
+      //   console.log(new Date().toISOString(), info);
+      // }
+    };
   }
 
   private readonly socksConfig?: SocksClientOptions;
@@ -322,8 +327,14 @@ class SshTunnel {
     if (!this.sshClient) {
       await this.createSshClient();
     }
+    // {
+    // keepAliveInitialDelay: 10000,
+    // keepAlive: true
+    // }
     const server = net
-      .createServer(async netSocket => {
+      .createServer({
+        keepAlive: true,
+      }, async socket => {
         try {
           const alive = await this.throttleCheckAlive();
           if (!alive) {
@@ -347,7 +358,7 @@ class SshTunnel {
                       `朋友，检查一下目标服务器端口 ${id} ${destHost}:${destPort} 是否正常`,
                     );
                   }
-                  netSocket.end();
+                  socket.end();
                   return;
                 }
                 // https://stackoverflow.com/questions/17245881/how-do-i-debug-error-econnreset-in-node-js
@@ -359,23 +370,23 @@ class SshTunnel {
                 //   code: 'ECONNRESET',
                 //   syscall: 'read'
                 // }
-                netSocket.on('error', err => {
+                socket.on('error', err => {
                   console.log('[ssh-tunneling]: local socket error\n', err);
                 });
                 stream.on('error', err => {
                   console.log('[ssh-tunneling]: remote stream error\n', err);
                 });
-                // pipeline(netSocket, stream);
-                // pipeline(stream, netSocket);
-                // netSocket.pipe(stream);
-                // stream.pipe(netSocket);
-                // netSocket.on('data', data => {
+                // pipeline(socket, stream);
+                // pipeline(stream, socket);
+                // socket.pipe(stream);
+                // stream.pipe(socket);
+                // socket.on('data', data => {
                 //   logger.orange(`local data, ${data.toString('utf8')}`)
                 //   stream.write(data);
                 // })
                 // stream.on('data', data => {
                 //   logger.green(`remote data, ${data.toString('utf8')}`)
-                //   netSocket.write(data);
+                //   socket.write(data);
                 // })
               },
             );
@@ -387,7 +398,7 @@ class SshTunnel {
           logger.white('ssh connection was hung up, reconnecting...');
           this.createSshClient().catch(err => {
             logger.warn(err.message);
-            netSocket.end();
+            socket.end();
           });
         }
       })

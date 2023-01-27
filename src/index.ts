@@ -301,7 +301,7 @@ class SshTunnel {
       setTimeout(() => {
         // 防止大量并发请求进来时导致 channel 连接数过大，状态默认缓存 3s 后，自动销毁
         this.heartbeatPromise = undefined;
-      }, 3000);
+      }, 5000);
     });
     return this.heartbeatPromise;
   };
@@ -378,8 +378,8 @@ class SshTunnel {
                 });
                 // pipeline(socket, stream);
                 // pipeline(stream, socket);
-                // socket.pipe(stream);
-                // stream.pipe(socket);
+                socket.pipe(stream);
+                stream.pipe(socket);
                 // socket.on('data', data => {
                 //   logger.orange(`local data, ${data.toString('utf8')}`)
                 //   stream.write(data);

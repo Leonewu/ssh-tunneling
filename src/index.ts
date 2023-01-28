@@ -4,7 +4,7 @@ import { SocksClient, SocksClientOptions } from 'socks';
 import logger from './logger';
 import { getAvailablePort } from './utils';
 
-enum STATUS {
+export enum STATUS {
   INIT = 0,
   CONNECTING,
   READY,
@@ -512,6 +512,13 @@ class SshTunnel {
     }
     const targetList = this.proxyList.filter(item => id ? item.id === id : true);
     targetList.forEach(item => item.server.close());
+  }
+
+  getSSHClient(): SshClient | undefined  {
+    return this.sshClient
+  }
+  getSocksStatus(): STATUS {
+    return this.socksStatus
   }
 
 }

@@ -1,6 +1,6 @@
 # Ssh tunneling for nodejs
 
-A ssh tunneling client written in nodejs, which can do command executing and port forwarding.
+A ssh tunneling client based on ssh2, which can do command executing and port forwarding.
 
 ## Installation
 

@@ -215,6 +215,8 @@ const logger: Logger = {
 
 // logger.line(Object.keys(config).map((type: any) => ({ type, content: type })));
 
+// logger.startLine().mint('proxy server ').blue('vpc.redis.cluster').mint(' is listening on 127.0.0.1:3000 => 192.168.1.1:3000').endLine();
+
 // logger.lineGradient(
 //   `
 //    ▄▄▄▄███▄▄▄▄      ▄████████    ▄██████▄   ▄█   ▄████████

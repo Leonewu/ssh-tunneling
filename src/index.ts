@@ -421,9 +421,7 @@ class SshTunnel {
       id,
       type: 'out'
     });
-    logger.success(
-      `proxy server ${id} is listening on 127.0.0.1:${localPort} => ${destHost}:${destPort}`,
-    );
+    logger.startLine().mint('proxy server ').blue(id).mint(` is listening on 127.0.0.1:${localPort} => ${destHost}:${destPort}`).endLine();
     return proxyConfig;
   };
 

@@ -17,7 +17,7 @@ npm i ssh-tunneling
 
 ## API
 
-### `new SshTunel(config)`
+### `new SshTunnel(config)`
 
 options
 

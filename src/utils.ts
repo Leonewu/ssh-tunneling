@@ -1,9 +1,9 @@
 import net from 'net';
 
-export const checkPortAvailable = (port: number) => {
+export const checkPortAvailable = (port: number, host?: string): Promise<boolean> => {
   return new Promise((resolve) => {
     const server = net.createServer()
-      .listen(port)
+      .listen(port, host)
       .on('listening', () => {
         resolve(true);
         server.close();
@@ -23,7 +23,12 @@ export const getAvailablePort = async (port: number) => {
   if (port > 65535) {
     throw new Error('There is no available port');
   }
-  const isAvailable = await checkPortAvailable(port);
+  // check the *
+  let isAvailable = await checkPortAvailable(port);
+  if (isAvailable) {
+    // check the localhost 
+    isAvailable = await checkPortAvailable(port, '127.0.0.1')
+  }
   if (!isAvailable) {
     return getAvailablePort(port + 1);
   }

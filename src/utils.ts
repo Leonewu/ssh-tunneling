@@ -16,6 +16,9 @@ export const checkPortAvailable = (port: number) => {
   });
 }
 
+/**
+ * @description check whether port is idle and then return another idle port if the port pass in is unavailable
+ */
 export const getAvailablePort = async (port: number) => {
   if (port > 65535) {
     throw new Error('There is no available port');

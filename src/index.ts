@@ -521,4 +521,4 @@ class SshTunnel {
 
 }
 
-export { logger, SshTunnel }
+export { logger, SshTunnel, getAvailablePort }

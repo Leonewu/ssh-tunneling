@@ -23,12 +23,16 @@ export type SshConfig = SshConnectConfig & {
    * @description socks hopping server for ssh connection 
    * @example socks5:180.80.80.80:1080
    */
-  hoppingServer?: string 
+  hoppingServer?: string;
+  socksConfig?: {
+    userId: SocksClientOptions['proxy']['userId'],
+    password: SocksClientOptions['proxy']['password'],
+  };
 }
 
 class SshTunnel {
   constructor(sshConfig: SshConfig) {
-    const { hoppingServer, ...restConfig } = sshConfig;
+    const { hoppingServer, socksConfig, ...restConfig } = sshConfig;
     if (hoppingServer) {
       // 初始化 socks 配置
       // socks5://180.80.80.80:1080
@@ -43,6 +47,7 @@ class SshTunnel {
           host: hoppingIp,
           port: Number(hoppingPort),
           type: Number(hoppingSocksType) as 4 | 5,
+          ...socksConfig
         },
         command: 'connect',
         destination: {

@@ -21,33 +21,31 @@ type ProxyConfig =  {
 export type SshConfig = SshConnectConfig & { 
   /**
    * @description socks hopping server for ssh connection 
-   * @example socks5:180.80.80.80:1080
+   * @example socks5://user:password@180.80.80.80:1080
    */
   hoppingServer?: string;
-  socksConfig?: {
-    userId: SocksClientOptions['proxy']['userId'],
-    password: SocksClientOptions['proxy']['password'],
-  };
 }
 
 class SshTunnel {
   constructor(sshConfig: SshConfig) {
-    const { hoppingServer, socksConfig, ...restConfig } = sshConfig;
+    const { hoppingServer, ...restConfig } = sshConfig;
     if (hoppingServer) {
       // 初始化 socks 配置
-      // socks5://180.80.80.80:1080
-      const socksReg = /socks(\d):\/\/([\d.]+):(\d+)/;
-      const [, hoppingSocksType, hoppingIp, hoppingPort] =
+      // socks5://user:password@180.80.80.80:1080
+      const socksReg = /socks(\d):\/\/([^:]+:[^:]+@)?([\d.]+):(\d+)/;
+      const [, hoppingSocksType, authInfo = '', hoppingIp, hoppingPort] =
         socksReg.exec(hoppingServer) || [];
       if (!hoppingIp || !hoppingPort || !hoppingSocksType) {
         throw new Error('socks服务配置错误');
       }
+      const [userId, password] = authInfo.slice(0, -1).split(':');
       this.socksConfig = {
         proxy: {
           host: hoppingIp,
           port: Number(hoppingPort),
           type: Number(hoppingSocksType) as 4 | 5,
-          ...socksConfig
+          userId: decodeURIComponent(userId),
+          password: decodeURIComponent(password),
         },
         command: 'connect',
         destination: {
@@ -318,7 +316,11 @@ class SshTunnel {
       destPort
     } = proxyConfig;
     if (this.socksConfig) {
-      return `ssh -o StrictHostKeyChecking=no -o ProxyCommand="nc -X ${this.socksConfig?.proxy.type} -x ${this.socksConfig?.proxy.host}:${this.socksConfig?.proxy.port} %h %p" ${this.sshConfig.username}@${this.sshConfig.host} -L ${localPort}:${destHost}:${destPort}`;
+      let str = `ssh -o StrictHostKeyChecking=no -o ProxyCommand="nc -X ${this.socksConfig?.proxy.type} -x ${this.socksConfig?.proxy.host}:${this.socksConfig?.proxy.port} %h %p" ${this.sshConfig.username}@${this.sshConfig.host} -L ${localPort}:${destHost}:${destPort}`;
+      if (this.socksConfig.proxy.userId) {
+        str += ` --proxy-auth "${this.socksConfig.proxy.userId}:${this.socksConfig.proxy.password}" %h %p`;
+      }
+      return str;
     }
     return `ssh -o StrictHostKeyChecking=no ${this.sshConfig.username}@${this.sshConfig.host} -L ${localPort}:${destHost}:${destPort}`;
   }

@@ -32,7 +32,7 @@ class SshTunnel {
     if (hoppingServer) {
       // 初始化 socks 配置
       // socks5://user:password@180.80.80.80:1080
-      const socksReg = /socks(\d):\/\/([^:]+:[^:]+@)?([\d.]+):(\d+)/;
+      const socksReg = /socks(\d):\/\/([^:]+(?::[^:]+)?@)?([\d.]+):(\d+)/;
       const [, hoppingSocksType, authInfo = '', hoppingIp, hoppingPort] =
         socksReg.exec(hoppingServer) || [];
       if (!hoppingIp || !hoppingPort || !hoppingSocksType) {
@@ -317,9 +317,9 @@ class SshTunnel {
     } = proxyConfig;
     if (this.socksConfig) {
       let str = `ssh -o StrictHostKeyChecking=no -o ProxyCommand="nc -X ${this.socksConfig?.proxy.type} -x ${this.socksConfig?.proxy.host}:${this.socksConfig?.proxy.port} %h %p" ${this.sshConfig.username}@${this.sshConfig.host} -L ${localPort}:${destHost}:${destPort}`;
-      if (this.socksConfig.proxy.userId) {
-        str += ` --proxy-auth "${this.socksConfig.proxy.userId}:${this.socksConfig.proxy.password}" %h %p`;
-      }
+      // if (this.socksConfig.proxy.userId) {
+      //   str += ` --proxy-auth "${this.socksConfig.proxy.userId}${this.socksConfig.proxy.password ? `:${this.socksConfig.proxy.password}` : ''}"`;
+      // }
       return str;
     }
     return `ssh -o StrictHostKeyChecking=no ${this.sshConfig.username}@${this.sshConfig.host} -L ${localPort}:${destHost}:${destPort}`;

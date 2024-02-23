@@ -5,8 +5,6 @@ import logger from './logger';
 import { getAvailablePort } from './utils';
 import EventEmitter from 'events';
 
-const buffer: any = {};
-
 export enum STATUS {
   INIT = 0,
   CONNECTING,
@@ -25,7 +23,8 @@ type ProxyConfig =  {
 export type SshConfig = SshConnectConfig & {
   /**
    * @description socks hopping server for ssh connection
-   * @example socks5://user:password@180.80.80.80:1080
+   * @example `socks5://${encodeURIComponent(user)}:${encodeURIComponent(password)}@180.80.80.80:1080`
+   * @example `socks4://${encodeURIComponent(user)}:${encodeURIComponent(password)}@180.80.80.80:1080`
    */
   hoppingServer?: string;
 }
@@ -36,7 +35,6 @@ class SshTunnel extends EventEmitter {
     const { hoppingServer, ...restConfig } = sshConfig;
     if (hoppingServer) {
       // 初始化 socks 配置
-      // socks5://user:password@180.80.80.80:1080
       const socksReg = /socks(\d):\/\/([^:]+(?::[^:]+)?@)?([\d.]+):(\d+)/;
       const [, hoppingSocksType, authInfo = '', hoppingIp, hoppingPort] =
         socksReg.exec(hoppingServer) || [];
@@ -68,10 +66,12 @@ class SshTunnel extends EventEmitter {
     };
   }
 
+  private debug = false;
+
   private readonly socksConfig?: SocksClientOptions;
 
   private readonly sshConfig: SshConnectConfig;
-  
+
   private proxyList: {
     localPort: number;
     destHost: string;
@@ -144,16 +144,6 @@ class SshTunnel extends EventEmitter {
    * 获取已经成功连接的 ssh 实例
    */
   private readonly createSshClient = async () => {
-    // if (this.sshClient) {
-    //   return this.sshClient;
-    // }
-    // if (this.sshStatus === STATUS.READY) {
-    //   return this.sshClient;
-    // }
-    // if (this.sshStatus === STATUS.CONNECTING) {
-    //   return this.sshPromise;
-    // }
-    // this.sshStatus = STATUS.CONNECTING;
     const onClose = (event: string, error?: any) => {
       // logger.info(`ssh ${event}`);
       // this.sshStatus = STATUS.CLOSE;
@@ -200,8 +190,6 @@ class SshTunnel extends EventEmitter {
       const onError = async (e: any) => {
         try {
           // TODO: create instance every time will lose any packages?
-          // this.stream = 'pause';
-          // this.emit('pause');
           this.socksSocket?.destroy();
           this.socksStatus = STATUS.CLOSE;
           this.sshClient?.destroy();
@@ -218,7 +206,7 @@ class SshTunnel extends EventEmitter {
         this.sshStatus = STATUS.READY;
         try {
           console.log('连接完成后检查一下');
-          await this.throttleCheckAlive();
+          await this.ping();
           resolve(true);
         } catch(e) {
           this.sshStatus = STATUS.CLOSE;
@@ -280,7 +268,7 @@ class SshTunnel extends EventEmitter {
     if (!this.sshClient) {
       await this.createSshClient();
     }
-    const alive = await this.throttleCheckAlive();
+    const alive = await this.ping();
     logger.bgBlue(alive)
     if (!alive) {
       // logger.white('ssh connection was hung up, reconnecting...');
@@ -303,12 +291,12 @@ class SshTunnel extends EventEmitter {
   /**
    * ssh hearbeat
    */
-  private heartbeatPromise?: Promise<boolean>;
+  private pingPromise?: Promise<boolean>;
 
   /**
    * 手动查询 ssh 是否被挂起
    */
-  private readonly throttleCheckAlive = async () => {
+  private readonly ping = async () => {
     console.log('调用 check函数', STATUS[this.sshStatus])
     if (this.sshStatus === STATUS.CONNECTING) {
       await this.connect();
@@ -317,14 +305,14 @@ class SshTunnel extends EventEmitter {
       return false;
     }
     if ([STATUS.CHECKING].includes(this.sshStatus)) {
-      return this.heartbeatPromise;
+      return this.pingPromise;
     }
     this.sshStatus = STATUS.CHECKING;
-    const uuid = performance.now();
-    this.heartbeatPromise = new Promise<boolean>(async resolve => {
+    // create an heartbeat uuid
+    this.pingPromise = new Promise<boolean>(async resolve => {
       console.log('检查ssh exec连接状态');
       try {
-        const res = await Promise.race([
+        await Promise.race([
           this._exec(`echo 1`),
           new Promise((_, rej) => {
             setTimeout(() => {
@@ -346,10 +334,10 @@ class SshTunnel extends EventEmitter {
 
       // setTimeout(() => {
       //   // 防止大量并发请求进来时导致 channel 连接数过大，状态默认缓存 3s 后，自动销毁
-      //   this.heartbeatPromise = undefined;
+      //   this.pingPromise = undefined;
       // }, 5000);
     });
-    return this.heartbeatPromise;
+    return this.pingPromise;
   };
 
   private genSshCommand(proxyConfig: ProxyConfig) {
@@ -395,7 +383,7 @@ class SshTunnel extends EventEmitter {
       }, async socket => {
         try {
           logger.bgYellow(`createServer 回调，请求进来了', ${[localPort, destHost, destPort, id].join('-----')}`);
-          const alive = await this.throttleCheckAlive();
+          const alive = await this.ping();
           if (!alive) {
             logger.white('请求进来后检查状态返回失败，开始重连: ssh connection was hung up, reconnecting...');
             await this.connect();

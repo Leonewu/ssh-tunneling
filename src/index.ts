@@ -3,11 +3,15 @@ import { Client as SshClient, ConnectConfig as SshConnectConfig } from 'ssh2';
 import { SocksClient, SocksClientOptions } from 'socks';
 import logger from './logger';
 import { getAvailablePort } from './utils';
+import EventEmitter from 'events';
+
+const buffer: any = {};
 
 export enum STATUS {
   INIT = 0,
   CONNECTING,
   READY,
+  CHECKING,
   CLOSE,
 }
 
@@ -18,16 +22,17 @@ type ProxyConfig =  {
   id: string | number;
 }
 
-export type SshConfig = SshConnectConfig & { 
+export type SshConfig = SshConnectConfig & {
   /**
-   * @description socks hopping server for ssh connection 
+   * @description socks hopping server for ssh connection
    * @example socks5://user:password@180.80.80.80:1080
    */
   hoppingServer?: string;
 }
 
-class SshTunnel {
+class SshTunnel extends EventEmitter {
   constructor(sshConfig: SshConfig) {
+    super();
     const { hoppingServer, ...restConfig } = sshConfig;
     if (hoppingServer) {
       // 初始化 socks 配置
@@ -66,7 +71,7 @@ class SshTunnel {
   private readonly socksConfig?: SocksClientOptions;
 
   private readonly sshConfig: SshConnectConfig;
-
+  
   private proxyList: {
     localPort: number;
     destHost: string;
@@ -109,16 +114,16 @@ class SshTunnel {
           // 清空上一个 socket 的监听函数
           this.socksSocket?.removeAllListeners();
           this.socksSocket = socksClient.socket;
-          const onClose = (_: string) => {
-            // logger.info(`socks ${event}`);
+          const onClose = (e: string) => {
+            logger.info(`socks event ${e}`);
             this.socksStatus = STATUS.CLOSE;
             this.socksSocket = undefined;
             this.socksPromise = undefined;
           };
           this.socksSocket
-            .on('close', () => onClose('close'))
-            .on('end', () => onClose('end'))
-            .on('error', () => onClose('error'));
+            ?.on('close', () => onClose('close'))
+            ?.on('end', () => onClose('end'))
+            ?.on('error', () => onClose('error'));
           resolve(this.socksSocket);
           this.socksStatus = STATUS.READY;
           this.socksPromise = undefined;
@@ -139,81 +144,107 @@ class SshTunnel {
    * 获取已经成功连接的 ssh 实例
    */
   private readonly createSshClient = async () => {
-    if (this.sshPromise !== undefined && this.sshStatus === STATUS.CONNECTING) {
+    // if (this.sshClient) {
+    //   return this.sshClient;
+    // }
+    // if (this.sshStatus === STATUS.READY) {
+    //   return this.sshClient;
+    // }
+    // if (this.sshStatus === STATUS.CONNECTING) {
+    //   return this.sshPromise;
+    // }
+    // this.sshStatus = STATUS.CONNECTING;
+    const onClose = (event: string, error?: any) => {
+      // logger.info(`ssh ${event}`);
+      // this.sshStatus = STATUS.CLOSE;
+      // this.sshPromise = undefined;
+      // this.socksSocket?.destroy(
+      //   new Error(error.message || 'closed by sshClient'),
+      // );
+      // error && logger.warn(`ssh ${event} `, error.message);
+    };
+    this.sshClient = new SshClient();
+    this.sshClient
+      .on('error', e => {
+        // onClose('error', e);
+        logger.red(`first listened error event:${e}`)
+      })
+      .on('close', e => {
+        // onClose('close', e);
+        logger.red(`first listened close event:${e}`)
+      })
+    //   .on('timeout', () => {
+    //     onClose('timeout');
+    //   })
+    //   .on('end', () => {
+    //     onClose('end');
+    //   });
+  };
+
+  /** */
+  public async connect() {
+    logger.bgBlue(`调用 connect 函数, ${STATUS[this.sshStatus]}`);
+    if (this.sshStatus === STATUS.READY) {
+      return this.sshClient;
+    }
+    if (this.sshStatus === STATUS.CONNECTING) {
       return this.sshPromise;
     }
     this.sshStatus = STATUS.CONNECTING;
     let socksSocket: net.Socket;
-    if (this.socksConfig) {
-      socksSocket = await this.createSocksClient();
-    }
-    this.sshPromise = new Promise((resolve, reject) => {
-      try {
-        const sshClient = new SshClient();
-        const onClose = (event: string, error?: any) => {
-          // logger.info(`ssh ${event}`);
-          this.sshStatus = STATUS.CLOSE;
-          this.sshClient = undefined;
-          this.sshPromise = undefined;
-          this.socksSocket?.destroy(
-            new Error(error.message || 'closed by sshClient'),
-          );
-          reject(error);
-          // error && logger.warn(`ssh ${event} `, error.message);
-        };
-        sshClient
-          .on('ready', () => {
-            logger.purple('ssh connection ready');
-            // 清空上一个 ssh client 的监听函数，销毁上一个 sshClient
-            this.sshClient?.removeAllListeners();
-            this.sshClient?.destroy();
-            this.sshStatus = STATUS.READY;
-            this.sshClient = sshClient;
-            this.heartbeatPromise = Promise.resolve(true).finally(() => {
-              setTimeout(() => {
-                this.heartbeatPromise = undefined;
-              }, 3000);
-            });
-            resolve(sshClient);
-            this.sshPromise = undefined;
-          })
-          .connect({
-            readyTimeout: 10000,
-            ...this.sshConfig,
-            sock: socksSocket,
-          })
-          .on('error', e => {
-            onClose('error', e);
-          })
-          .on('close', e => {
-            onClose('close', e);
-          })
-          .on('timeout', () => {
-            onClose('timeout');
-          })
-          .on('end', () => {
-            onClose('end');
-          });
-      } catch (e) {
-        this.sshStatus = STATUS.CLOSE;
-        this.sshClient = undefined;
-        this.sshPromise = undefined;
-        this.socksSocket?.destroy(new Error('closed by sshClient'));
-        reject(e);
+    this.sshPromise = new Promise(async (resolve, reject) => {
+    logger.bgBlue(`开始连接, ${STATUS[this.sshStatus]}`);
+      if (this.socksConfig) {
+        socksSocket = await this.createSocksClient();
       }
-    });
+      const onError = async (e: any) => {
+        try {
+          // TODO: create instance every time will lose any packages?
+          // this.stream = 'pause';
+          // this.emit('pause');
+          this.socksSocket?.destroy();
+          this.socksStatus = STATUS.CLOSE;
+          this.sshClient?.destroy();
+          this.sshStatus = STATUS.CLOSE;
+          await this.createSshClient();
+          await this.connect();
+        } catch(e) {
+          reject(`连接失败 ${e || ''}`)
+        }
+      }
+
+      const onReady = async () => {
+        logger.purple('ssh connection ready');
+        this.sshStatus = STATUS.READY;
+        try {
+          console.log('连接完成后检查一下');
+          await this.throttleCheckAlive();
+          resolve(true);
+        } catch(e) {
+          this.sshStatus = STATUS.CLOSE;
+          console.log(e);
+          reject(e);
+        }
+      }
+      this.sshClient?.once('ready', onReady);
+      this.sshClient?.on('error', onError);
+      try {
+        this.sshClient?.connect({
+          readyTimeout: 10000,
+          ...this.sshConfig,
+          sock: socksSocket,
+        })
+      } catch(e) {
+        this.sshClient?.removeListener('error', onError);
+        logger.error(`ssh connection error${e}`);
+        this.sshStatus = STATUS.CLOSE;
+        throw e;
+      }
+    })
     return this.sshPromise;
-  };
+  }
 
   private async _exec(command: string): Promise<string> {
-    if (!this.sshClient) {
-      await this.createSshClient();
-    }
-    const alive = await this.throttleCheckAlive();
-    if (!alive) {
-      logger.white('ssh connection was hung up, reconnecting...');
-      await this.createSshClient();
-    }
     let res = '';
     return new Promise((resolve, reject) => {
       this.sshClient?.exec(command, (err, stream) => {
@@ -242,10 +273,19 @@ class SshTunnel {
   /**
    * @description execute command
    * @params a command or commands array
-   * @return If passing one command, it will return the result after executed.  
+   * @return If passing one command, it will return the result after executed.
    * @return If passing a command array, it will return an array by order after all of them were executed.
    */
   public async exec(command: any): Promise<any> {
+    if (!this.sshClient) {
+      await this.createSshClient();
+    }
+    const alive = await this.throttleCheckAlive();
+    logger.bgBlue(alive)
+    if (!alive) {
+      // logger.white('ssh connection was hung up, reconnecting...');
+      await this.connect().catch(e => {});
+    }
     if (Array.isArray(command)) {
       const divider = '__ssh_tunneling_divider__'
       const combinedCommand = command.join(` && echo -n ${divider} && `);
@@ -268,43 +308,46 @@ class SshTunnel {
   /**
    * 手动查询 ssh 是否被挂起
    */
-  private readonly throttleCheckAlive = () => {
-    if (this.heartbeatPromise !== undefined) {
+  private readonly throttleCheckAlive = async () => {
+    console.log('调用 check函数', STATUS[this.sshStatus])
+    if (this.sshStatus === STATUS.CONNECTING) {
+      await this.connect();
+    }
+    if (![STATUS.CHECKING, STATUS.READY].includes(this.sshStatus)) {
+      return false;
+    }
+    if ([STATUS.CHECKING].includes(this.sshStatus)) {
       return this.heartbeatPromise;
     }
-    this.heartbeatPromise = new Promise<boolean>(resolve => {
-      if (!this.sshClient) {
-        resolve(false);
-        return;
-      }
+    this.sshStatus = STATUS.CHECKING;
+    const uuid = performance.now();
+    this.heartbeatPromise = new Promise<boolean>(async resolve => {
+      console.log('检查ssh exec连接状态');
       try {
-        this.sshClient.exec(`echo 1`, {}, (err, stream) => {
-          if (err) {
-            resolve(false);
-            return;
-          }
-          stream.on('data', () => {
-            resolve(true);
-            stream.close();
-          });
-          stream.stderr.on('data', () => {
-            resolve(true);
-            stream.close();
-          });
-        });
+        const res = await Promise.race([
+          this._exec(`echo 1`),
+          new Promise((_, rej) => {
+            setTimeout(() => {
+              rej('exec timeout');
+            }, 3000);
+          }),
+        ]);
+        console.log('检查ssh exec连接状态成功');
+        this.sshStatus = STATUS.READY;
+        resolve(true);
       } catch (e) {
         //  exec 时会判断是否 not connected
+        console.log('ssh exec 失败', e)
         resolve(false);
+        this.sshStatus = STATUS.CLOSE;
+        this.sshClient.end();
       }
-      setTimeout(() => {
-        // 手动超时 timeout
-        resolve(false);
-      }, 5000);
     }).finally(() => {
-      setTimeout(() => {
-        // 防止大量并发请求进来时导致 channel 连接数过大，状态默认缓存 3s 后，自动销毁
-        this.heartbeatPromise = undefined;
-      }, 5000);
+
+      // setTimeout(() => {
+      //   // 防止大量并发请求进来时导致 channel 连接数过大，状态默认缓存 3s 后，自动销毁
+      //   this.heartbeatPromise = undefined;
+      // }, 5000);
     });
     return this.heartbeatPromise;
   };
@@ -325,6 +368,16 @@ class SshTunnel {
     return `ssh -o StrictHostKeyChecking=no ${this.sshConfig.username}@${this.sshConfig.host} -L ${localPort}:${destHost}:${destPort}`;
   }
 
+
+  public async autoReconnect() {
+    try {
+      await this.connect();
+    } catch(e) {
+      logger.warn(`ssh autoReconnect error, ${e}`);
+      return this.autoReconnect();
+    }
+  }
+
   private _forwardOut = async (proxyConfig: ProxyConfig) => {
     const { localPort, destHost, destPort, id } = proxyConfig;
     if (this.proxyList.find(item => item.id === id)) {
@@ -334,79 +387,119 @@ class SshTunnel {
     if (!this.sshClient) {
       await this.createSshClient();
     }
-    // {
-    // keepAliveInitialDelay: 10000,
-    // keepAlive: true
-    // }
+    // TODO: 这里要加回来
+    await this.connect();
     const server = net
       .createServer({
         keepAlive: true,
       }, async socket => {
         try {
+          logger.bgYellow(`createServer 回调，请求进来了', ${[localPort, destHost, destPort, id].join('-----')}`);
           const alive = await this.throttleCheckAlive();
           if (!alive) {
-            logger.white('ssh connection was hung up, reconnecting...');
-            await this.createSshClient();
+            logger.white('请求进来后检查状态返回失败，开始重连: ssh connection was hung up, reconnecting...');
+            await this.connect();
           }
           // 并发 exec(`nc ip port`) 数量在超过 服务器 ssh 设置的最大 channel 数时（一般是 10），会有 Channel open failure 的问题
           // @see https://github.com/mscdex/ssh2/issues/219
           // forwardOut 的 localPort 可以为任意数字，不影响
-          if (this.sshClient) {
-            this.sshClient.forwardOut(
-              '127.0.0.1',
-              1234,
-              destHost,
-              destPort,
-              (err, stream) => {
-                if (err) {
-                  logger.warn(`${id} forwardout err: `, err.message);
-                  if (err.message?.includes('Connection refused')) {
-                    logger.bgRed(
-                      `朋友，检查一下目标服务器端口 ${id} ${destHost}:${destPort} 是否正常`,
-                    );
-                  }
-                  socket.end();
-                  return;
+          this.sshClient!.forwardOut(
+            '127.0.0.1',
+            1234,
+            destHost,
+            destPort,
+            (err, stream) => {
+              if (err) {
+                logger.warn(`${id} forwardout err: ${err.message}`);
+                if (err.message?.includes('Connection refused')) {
+                  logger.bgRed(
+                    `朋友，检查一下目标服务器端口 ${id} ${destHost}:${destPort} 是否正常`,
+                  );
                 }
-                // https://stackoverflow.com/questions/17245881/how-do-i-debug-error-econnreset-in-node-js
-                // if no error hanlder, it may occur this error which casued by client side.
-                // Then the local server will exit.
-                // Error: read ECONNRESET
-                // at TCP.onStreamRead (node:internal/stream_base_commons:217:20) {
-                //   errno: -54,
-                //   code: 'ECONNRESET',
-                //   syscall: 'read'
-                // }
-                socket.on('error', err => {
-                  console.log('[ssh-tunneling]: local socket error\n', err);
-                });
-                stream.on('error', err => {
-                  console.log('[ssh-tunneling]: remote stream error\n', err);
-                });
-                // pipeline(socket, stream);
-                // pipeline(stream, socket);
-                socket.pipe(stream);
-                stream.pipe(socket);
-                // socket.on('data', data => {
-                //   logger.orange(`local data, ${data.toString('utf8')}`)
-                //   stream.write(data);
-                // })
-                // stream.on('data', data => {
-                //   logger.green(`remote data, ${data.toString('utf8')}`)
-                //   socket.write(data);
-                // })
-              },
-            );
-          } else {
-            throw new Error();
-          }
+                socket.end();
+                return;
+              }
+              // https://stackoverflow.com/questions/17245881/how-do-i-debug-error-econnreset-in-node-js
+              // if no error hanlder, it may occur this error which casued by client side.
+              // Then the local server will exit.
+              // Error: read ECONNRESET
+              // at TCP.onStreamRead (node:internal/stream_base_commons:217:20) {
+              //   errno: -54,
+              //   code: 'ECONNRESET',
+              //   syscall: 'read'
+              // }
+              socket.on('error', err => {
+                console.log('[ssh-tunneling]: local socket error\n', err);
+              });
+              stream.on('error', err => {
+                console.log('[ssh-tunneling]: remote stream error\n', err);
+              });
+              // pipeline(socket, stream);
+              // pipeline(stream, socket);
+              logger.bgGreen(`forwardOut 回调，请求进来了 ${[localPort, destHost, destPort, id].join('-----')}，注册事件`)
+              // this.once('pause', () => {
+                // logger.bgMint(`${[localPort, destHost, destPort, id].join('-----')} 暂停传输，状态为 socket: ${socket.isPaused() ? '暂停中' : '已恢复'} stream: ${stream.isPaused() ? '暂停中' : '已恢复'}`);
+                // console.log('\n');
+                // stream.pause();
+                // socket.pause();
+              // });
+
+              // this.once('resume', () => {
+              //   // logger.bgOrange(`${[localPort, destHost, destPort, id].join('-----')} 恢复传输, 状态为 socket: ${socket.isPaused() ? '暂停中' : '已恢复'} stream: ${stream.isPaused() ? '暂停中' : '已恢复'}`);
+              //   // console.log('\n');
+              //   // stream.resume();
+              //   // socket.resume();
+              //   logger.bgOrange(`resume ${[localPort, destHost, destPort, id].join('-----')}`);
+              //   if (buffer[id]?.length) {
+              //     console.log('buffer', id, buffer[id].length);
+              //     buffer[id].forEach(stream.write);
+              //   }
+              // });
+
+              socket.pipe(stream);
+              stream.pipe(socket);
+              socket.on('end', () => {
+                stream.end();
+              });
+              stream.on('end', () => {
+                socket.end();
+              })
+              // socket.on('data', data => {
+              //   // logger.orange(`local data, ${data.toString('utf8')}`)
+              //   logger.orange(`local data ${[localPort, destHost, destPort, id].join('-----')}, ${this.stream}`)
+              //   if (this.stream !== 'resume') {
+              //     console.log('入站')
+              //     if (!buffer[id]) {
+              //       buffer[id] = [];
+              //     }
+              //     buffer[id].push(data);
+              //     // socket.pause();
+              //     // stream.pause();
+              //   } else {
+              //     if (buffer[id]?.length) {
+              //       console.log('buffer', id, buffer[id].length);
+              //       buffer[id].forEach(stream.write);
+              //     }
+              //     stream.write(data);
+              //   }
+              // })
+              // stream.on('data', data => {
+              //   // logger.green(`remote data, ${data.toString('utf8')}`)
+              //   logger.green(`remote data ${[localPort, destHost, destPort, id].join('-----')}`)
+              //   socket.write(data);
+              // })
+            },
+          );
+
         } catch (e) {
-          logger.warn(e.message);
-          logger.white('ssh connection was hung up, reconnecting...');
-          this.createSshClient().catch(err => {
-            logger.warn(err.message);
-            socket.end();
-          });
+          console.error(e);
+          logger.warn(e ?? e.message);
+          logger.white('error retry: ssh connection was hung up, reconnecting...');
+          await this.autoReconnect();
+          // this.createSshClient().catch(err => {
+          //   logger.warn(err.message);
+          //   socket.end();
+          // });
         }
       })
       .listen(localPort)
@@ -421,8 +514,8 @@ class SshTunnel {
         logger.gray(`proxy server ${id} is closed`);
       });
     this.proxyList.push({
-      localPort, 
-      destHost, 
+      localPort,
+      destHost,
       destPort,
       server,
       id,
